@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b5d73">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{color-scheme:light dark}body{margin:0}</style>
+<title>Nithi Ground Check</title>
+<style>
+/* Layout: one-column field tool, bottom tab bar, big tap targets, numbers in mono. */
+:root{
+  --bg:#f2f3ef; --surface:#ffffff; --ink:#1a2330; --muted:#5b6675; --line:#d8dcd3;
+  --accent:#0b5d73; --accent-ink:#ffffff; --field:#ffffff;
+  --ok:#1b7447; --okbg:#dff1e6; --bad:#b3261e; --badbg:#fbe3e0; --warn:#8a5a00; --warnbg:#faefcf;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#1a212a; --ink:#e6eaf0; --muted:#97a2b0; --line:#2b3440;
+  --accent:#5cc0d8; --accent-ink:#06212a; --field:#0f141a;
+  --ok:#6fd49b; --okbg:#173326; --bad:#ff8a80; --badbg:#3a1d1b; --warn:#f0c15a; --warnbg:#392d12; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#1a212a; --ink:#e6eaf0; --muted:#97a2b0; --line:#2b3440;
+  --accent:#5cc0d8; --accent-ink:#06212a; --field:#0f141a;
+  --ok:#6fd49b; --okbg:#173326; --bad:#ff8a80; --badbg:#3a1d1b; --warn:#f0c15a; --warnbg:#392d12; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;
+  padding-block:14px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-size:20px;margin:0;font-weight:600;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:12.5px}
+.badge{font-size:11.5px;padding:3px 8px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+label,.lab{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+select,input,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px}
+input.num{font-family:var(--mono)}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.seg.one{grid-template-columns:1fr}
+.seg button{min-height:42px;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:8px;font:inherit;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:40px;min-width:48px;padding:0 10px;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:8px;font:inherit;font-family:var(--mono);font-size:13.5px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.chip.done::after{content:" ✓";color:var(--ok)}
+.chip[aria-pressed="true"].done::after{color:var(--accent-ink)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--mono);text-align:right;overflow-wrap:anywhere}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid3>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.btn{min-height:46px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:15px;padding:0 16px}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.btn.danger{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.4}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12.5px;font-weight:600}
+.pill.ok{background:var(--okbg);color:var(--ok)} .pill.bad{background:var(--badbg);color:var(--bad)} .pill.warn{background:var(--warnbg);color:var(--warn)} .pill.none{background:var(--field);color:var(--muted);border:1px solid var(--line)}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:9px 11px;font-size:13.5px}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.res .cell{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.res .cell b{display:block;font-family:var(--mono);font-size:19px;font-weight:500}
+.res .cell span{font-size:11.5px;color:var(--muted)}
+.res .cell.bad b{color:var(--bad)} .res .cell.ok b{color:var(--ok)}
+.hint{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.logrow{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.logrow:first-child{border-top:0;padding-top:0}
+.mono{font-family:var(--mono)} .tiny{font-size:12px;color:var(--muted)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{font-family:var(--mono)} th{font-weight:500;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+tr.tap{cursor:pointer}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+  padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));z-index:5}
+nav button{min-height:48px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:500;border-radius:8px}
+nav button[aria-current="page"]{color:var(--accent);font-weight:600;background:var(--field)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+textarea.csv{font-family:var(--mono);font-size:12px;min-height:140px}
+@media (prefers-reduced-motion:no-preference){.pill{transition:background .15s}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header><div><h1>Nithi Ground Check</h1><div class="sub">Ground readings against design · Arc 1960 / UTM 37S</div></div><span class="badge" id="store">…</span></header>
+  <main id="view"></main>
+</div>
+<nav id="tabs" aria-label="Sections">
+  <button data-tab="check" aria-current="page">Check</button>
+  <button data-tab="log">Log</button>
+  <button data-tab="design">Design</button>
+  <button data-tab="record">Record</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+
+<script>
+const DATA = {"theta":32.3483,"piers":[{"n":1,"base":"B1","baseSize":"9.7 x 3.0 x 3.0","E":351385.1392,"N":9968814.6214,"level":1305.93,"thk":3.0,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":0,"colTop":1319.93,"corners":[{"id":"C1","ring":"Centre","E":351387.4624,"N":9968816.0928,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351382.816,"N":9968813.15,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351387.4624,"N":9968816.0929,"dia":2200,"u":2.75,"v":0.0},{"id":"PL2","E":351382.8159,"N":9968813.15,"dia":2200,"u":-2.75,"v":0.0}]},{"n":2,"base":"B2","baseSize":"9.0 x 8.1 x 2.75","E":351406.5418,"N":9968780.8291,"level":1272.46,"thk":2.75,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":0.006,"colTop":1319.46,"corners":[{"id":"C1","ring":"Centre","E":351408.865,"N":9968782.3005,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351404.2186,"N":9968779.3577,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351407.6611,"N":9968784.2013,"dia":1800,"u":2.75,"v":2.25},{"id":"PL2","E":351408.865,"N":9968782.3005,"dia":1800,"u":2.75,"v":-0.0},{"id":"PL3","E":351410.0689,"N":9968780.3997,"dia":1800,"u":2.75,"v":-2.25},{"id":"PL4","E":351405.4225,"N":9968777.4568,"dia":1800,"u":-2.75,"v":-2.25},{"id":"PL5","E":351403.0147,"N":9968781.2584,"dia":1800,"u":-2.75,"v":2.25},{"id":"PL6","E":351404.2186,"N":9968779.3576,"dia":1800,"u":-2.75,"v":-0.0}]},{"n":3,"base":"B2","baseSize":"9.0 x 8.1 x 2.75","E":351427.8904,"N":9968747.0024,"level":1282.98,"thk":2.75,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":0.007,"colTop":1318.985,"corners":[{"id":"C1","ring":"Centre","E":351430.2136,"N":9968748.4738,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351425.5672,"N":9968745.531,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351429.0097,"N":9968750.3746,"dia":1800,"u":2.75,"v":2.25},{"id":"PL2","E":351430.2136,"N":9968748.4738,"dia":1800,"u":2.75,"v":-0.0},{"id":"PL3","E":351431.4175,"N":9968746.573,"dia":1800,"u":2.75,"v":-2.25},{"id":"PL4","E":351424.3632,"N":9968747.4318,"dia":1800,"u":-2.75,"v":2.25},{"id":"PL5","E":351425.5671,"N":9968745.531,"dia":1800,"u":-2.75,"v":0.0},{"id":"PL6","E":351426.771,"N":9968743.6301,"dia":1800,"u":-2.75,"v":-2.25}]},{"n":4,"base":"B6","baseSize":"9.1 x 9.1 x 3.0","E":351449.3623,"N":9968713.2539,"level":1268.05,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0,"colTop":1316.75,"corners":[{"id":"O1","ring":"Outer","E":351451.3082,"N":9968715.7884,"u":3,"v":1.1},{"id":"O2","ring":"Outer","E":351450.6182,"N":9968715.9433,"u":2.5,"v":1.6},{"id":"O3","ring":"Outer","E":351446.3942,"N":9968713.2679,"u":-2.5,"v":1.6},{"id":"O4","ring":"Outer","E":351446.2393,"N":9968712.578,"u":-3,"v":1.1},{"id":"O5","ring":"Outer","E":351447.4164,"N":9968710.7194,"u":-3,"v":-1.1},{"id":"O6","ring":"Outer","E":351448.1064,"N":9968710.5645,"u":-2.5,"v":-1.6},{"id":"O7","ring":"Outer","E":351452.3304,"N":9968713.2399,"u":2.5,"v":-1.6},{"id":"O8","ring":"Outer","E":351452.4853,"N":9968713.9298,"u":3,"v":-1.1},{"id":"I1","ring":"Inner","E":351450.9654,"N":9968715.3016,"u":2.45,"v":0.872},{"id":"I2","ring":"Inner","E":351450.72,"N":9968715.3567,"u":2.272,"v":1.05},{"id":"I3","ring":"Inner","E":351446.8809,"N":9968712.9252,"u":-2.272,"v":1.05},{"id":"I4","ring":"Inner","E":351446.8258,"N":9968712.6798,"u":-2.45,"v":0.872},{"id":"I5","ring":"Inner","E":351447.7592,"N":9968711.2062,"u":-2.45,"v":-0.872},{"id":"I6","ring":"Inner","E":351448.0046,"N":9968711.1511,"u":-2.272,"v":-1.05},{"id":"I7","ring":"Inner","E":351451.8437,"N":9968713.5826,"u":2.272,"v":-1.05},{"id":"I8","ring":"Inner","E":351451.8988,"N":9968713.828,"u":2.45,"v":-0.872}],"piles":[{"id":"PL1","E":351453.157,"N":9968712.4021,"dia":2200,"u":2.75,"v":-2.75},{"id":"PL2","E":351450.2141,"N":9968717.0485,"dia":2200,"u":2.75,"v":2.75},{"id":"PL3","E":351445.5677,"N":9968714.1057,"dia":2200,"u":-2.75,"v":2.75},{"id":"PL4","E":351448.5105,"N":9968709.4592,"dia":2200,"u":-2.75,"v":-2.75}]},{"n":5,"base":"B5","baseSize":"12.6 x 8.1 x 2.75","E":351470.6957,"N":9968679.4176,"level":1247.664,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"CHECK","gradeDiff":0.237,"colTop":1316.51,"corners":[{"id":"O1","ring":"Outer","E":351472.481,"N":9968682.2055,"u":3,"v":1.4},{"id":"O2","ring":"Outer","E":351471.7911,"N":9968682.3604,"u":2.5,"v":1.9},{"id":"O3","ring":"Outer","E":351467.567,"N":9968679.6851,"u":-2.5,"v":1.9},{"id":"O4","ring":"Outer","E":351467.4122,"N":9968678.9951,"u":-3,"v":1.4},{"id":"O5","ring":"Outer","E":351468.9104,"N":9968676.6297,"u":-3,"v":-1.4},{"id":"O6","ring":"Outer","E":351469.6003,"N":9968676.4748,"u":-2.5,"v":-1.9},{"id":"O7","ring":"Outer","E":351473.8244,"N":9968679.1501,"u":2.5,"v":-1.9},{"id":"O8","ring":"Outer","E":351473.9792,"N":9968679.8401,"u":3,"v":-1.4},{"id":"I1","ring":"Inner","E":351472.1071,"N":9968681.6745,"u":2.4,"v":1.151},{"id":"I2","ring":"Inner","E":351471.9022,"N":9968681.7205,"u":2.251,"v":1.3},{"id":"I3","ring":"Inner","E":351468.098,"N":9968679.3112,"u":-2.251,"v":1.3},{"id":"I4","ring":"Inner","E":351468.052,"N":9968679.1062,"u":-2.4,"v":1.151},{"id":"I5","ring":"Inner","E":351469.2843,"N":9968677.1607,"u":-2.4,"v":-1.151},{"id":"I6","ring":"Inner","E":351469.4892,"N":9968677.1147,"u":-2.251,"v":-1.3},{"id":"I7","ring":"Inner","E":351473.2934,"N":9968679.524,"u":2.251,"v":-1.3},{"id":"I8","ring":"Inner","E":351473.3394,"N":9968679.729,"u":2.4,"v":-1.151}],"piles":[{"id":"PL1","E":351473.2934,"N":9968683.7262,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351475.7012,"N":9968679.9246,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351469.4918,"N":9968681.3184,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351471.8996,"N":9968677.5168,"dia":1800,"u":0.0,"v":-2.25},{"id":"PL5","E":351465.6901,"N":9968678.9106,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351468.0979,"N":9968675.109,"dia":1800,"u":-4.5,"v":-2.25}],"rev":{"old":1247.78,"oldTop":1316.63,"date":"19 Nov 2026"}},{"n":6,"base":"B3","baseSize":"12.6 x 8.1 x 2.75","E":351492.1525,"N":9968645.6595,"level":1235.43,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0.002,"colTop":1315.8,"corners":[{"id":"O1","ring":"Outer","E":351493.7238,"N":9968648.7854,"u":3,"v":1.8},{"id":"O2","ring":"Outer","E":351493.0339,"N":9968648.9402,"u":2.5,"v":2.3},{"id":"O3","ring":"Outer","E":351488.8098,"N":9968646.2649,"u":-2.5,"v":2.3},{"id":"O4","ring":"Outer","E":351488.655,"N":9968645.575,"u":-3,"v":1.8},{"id":"O5","ring":"Outer","E":351490.5812,"N":9968642.5336,"u":-3,"v":-1.8},{"id":"O6","ring":"Outer","E":351491.2711,"N":9968642.3788,"u":-2.5,"v":-2.3},{"id":"O7","ring":"Outer","E":351495.4952,"N":9968645.0541,"u":2.5,"v":-2.3},{"id":"O8","ring":"Outer","E":351495.65,"N":9968645.744,"u":3,"v":-1.8},{"id":"I1","ring":"Inner","E":351493.3499,"N":9968648.2544,"u":2.4,"v":1.551},{"id":"I2","ring":"Inner","E":351493.145,"N":9968648.3004,"u":2.251,"v":1.7},{"id":"I3","ring":"Inner","E":351489.3408,"N":9968645.891,"u":-2.251,"v":1.7},{"id":"I4","ring":"Inner","E":351489.2948,"N":9968645.686,"u":-2.4,"v":1.551},{"id":"I5","ring":"Inner","E":351490.9551,"N":9968643.0646,"u":-2.4,"v":-1.551},{"id":"I6","ring":"Inner","E":351491.16,"N":9968643.0186,"u":-2.251,"v":-1.7},{"id":"I7","ring":"Inner","E":351494.9642,"N":9968645.428,"u":2.251,"v":-1.7},{"id":"I8","ring":"Inner","E":351495.0102,"N":9968645.633,"u":2.4,"v":-1.551}],"piles":[{"id":"PL1","E":351494.7502,"N":9968649.9681,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351497.158,"N":9968646.1664,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351490.9486,"N":9968647.5603,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351493.3564,"N":9968643.7587,"dia":1800,"u":0.0,"v":-2.25},{"id":"PL5","E":351487.1469,"N":9968645.1525,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351489.5547,"N":9968641.3509,"dia":1800,"u":-4.5,"v":-2.25}]},{"n":7,"base":"B3","baseSize":"12.6 x 8.1 x 2.75","E":351513.501,"N":9968611.8328,"level":1233.27,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0,"colTop":1315.322,"corners":[{"id":"O1","ring":"Outer","E":351515.0723,"N":9968614.9587,"u":3,"v":1.8},{"id":"O2","ring":"Outer","E":351514.3824,"N":9968615.1135,"u":2.5,"v":2.3},{"id":"O3","ring":"Outer","E":351510.1583,"N":9968612.4382,"u":-2.5,"v":2.3},{"id":"O4","ring":"Outer","E":351510.0035,"N":9968611.7483,"u":-3,"v":1.8},{"id":"O5","ring":"Outer","E":351511.9297,"N":9968608.7069,"u":-3,"v":-1.8},{"id":"O6","ring":"Outer","E":351512.6196,"N":9968608.5521,"u":-2.5,"v":-2.3},{"id":"O7","ring":"Outer","E":351516.8437,"N":9968611.2274,"u":2.5,"v":-2.3},{"id":"O8","ring":"Outer","E":351516.9985,"N":9968611.9173,"u":3,"v":-1.8},{"id":"I1","ring":"Inner","E":351514.6984,"N":9968614.4277,"u":2.4,"v":1.551},{"id":"I2","ring":"Inner","E":351514.4935,"N":9968614.4737,"u":2.251,"v":1.7},{"id":"I3","ring":"Inner","E":351510.6893,"N":9968612.0643,"u":-2.251,"v":1.7},{"id":"I4","ring":"Inner","E":351510.6433,"N":9968611.8593,"u":-2.4,"v":1.551},{"id":"I5","ring":"Inner","E":351512.3036,"N":9968609.2379,"u":-2.4,"v":-1.551},{"id":"I6","ring":"Inner","E":351512.5085,"N":9968609.1919,"u":-2.251,"v":-1.7},{"id":"I7","ring":"Inner","E":351516.3127,"N":9968611.6013,"u":2.251,"v":-1.7},{"id":"I8","ring":"Inner","E":351516.3587,"N":9968611.8063,"u":2.4,"v":-1.551}],"piles":[{"id":"PL1","E":351516.0988,"N":9968616.1414,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351518.5066,"N":9968612.3398,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351512.2971,"N":9968613.7336,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351514.7049,"N":9968609.932,"dia":1800,"u":0.0,"v":-2.25},{"id":"PL5","E":351508.4955,"N":9968611.3259,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351510.9033,"N":9968607.5242,"dia":1800,"u":-4.5,"v":-2.25}]},{"n":8,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351534.9308,"N":9968578.0567,"level":1229.035,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"CHECK","gradeDiff":0.121,"colTop":1314.962,"corners":[{"id":"O1","ring":"Outer","E":351536.3416,"N":9968581.436,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351535.6517,"N":9968581.5909,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351531.4276,"N":9968578.9155,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351531.2727,"N":9968578.2256,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351533.52,"N":9968574.6774,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351534.2099,"N":9968574.5225,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351538.434,"N":9968577.1979,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351538.5889,"N":9968577.8878,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351535.9677,"N":9968580.905,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351535.7627,"N":9968580.951,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351531.9586,"N":9968578.5416,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351531.9126,"N":9968578.3367,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351533.8939,"N":9968575.2084,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351534.0989,"N":9968575.1624,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351537.903,"N":9968577.5718,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351537.949,"N":9968577.7767,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351538.1058,"N":9968583.3236,"dia":2200,"u":5.5,"v":2.751},{"id":"PL2","E":351541.0486,"N":9968578.6772,"dia":2200,"u":5.5,"v":-2.749},{"id":"PL3","E":351533.4598,"N":9968580.3758,"dia":2200,"u":-0.002,"v":2.746},{"id":"PL4","E":351536.4022,"N":9968575.7343,"dia":2200,"u":0.0,"v":-2.749},{"id":"PL5","E":351528.8129,"N":9968577.4379,"dia":2200,"u":-5.5,"v":2.751},{"id":"PL6","E":351531.7557,"N":9968572.7915,"dia":2200,"u":-5.5,"v":-2.749}],"rev":{"old":1230.42,"oldTop":1316.35,"date":"19 Nov 2026"}},{"n":9,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351556.3334,"N":9968544.2652,"level":1228.52,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0,"colTop":1314.37,"corners":[{"id":"O1","ring":"Outer","E":351557.7442,"N":9968547.6445,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351557.0543,"N":9968547.7994,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351552.8302,"N":9968545.124,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351552.6753,"N":9968544.4341,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351554.9226,"N":9968540.8859,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351555.6125,"N":9968540.731,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351559.8366,"N":9968543.4064,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351559.9915,"N":9968544.0963,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351557.3703,"N":9968547.1135,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351557.1653,"N":9968547.1595,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351553.3612,"N":9968544.7501,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351553.3152,"N":9968544.5452,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351555.2965,"N":9968541.4169,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351555.5015,"N":9968541.3709,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351559.3056,"N":9968543.7803,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351559.3516,"N":9968543.9852,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351559.5084,"N":9968549.5313,"dia":2200,"u":5.5,"v":2.75},{"id":"PL2","E":351562.4513,"N":9968544.8848,"dia":2200,"u":5.5,"v":-2.75},{"id":"PL3","E":351554.862,"N":9968546.5884,"dia":2200,"u":0.0,"v":2.75},{"id":"PL4","E":351557.8048,"N":9968541.9419,"dia":2200,"u":-0.0,"v":-2.75},{"id":"PL5","E":351550.2155,"N":9968543.6455,"dia":2200,"u":-5.5,"v":2.75},{"id":"PL6","E":351553.1584,"N":9968538.9991,"dia":2200,"u":-5.5,"v":-2.75}]},{"n":10,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351577.7359,"N":9968510.473,"level":1219.503,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0.014,"colTop":1313.9,"corners":[{"id":"O1","ring":"Outer","E":351579.1467,"N":9968513.8523,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351578.4568,"N":9968514.0072,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351574.2327,"N":9968511.3318,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351574.0778,"N":9968510.6419,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351576.3251,"N":9968507.0937,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351577.015,"N":9968506.9388,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351581.2391,"N":9968509.6142,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351581.394,"N":9968510.3041,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351578.7728,"N":9968513.3213,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351578.5678,"N":9968513.3673,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351574.7637,"N":9968510.9579,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351574.7177,"N":9968510.753,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351576.699,"N":9968507.6247,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351576.904,"N":9968507.5787,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351580.7081,"N":9968509.9881,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351580.7541,"N":9968510.193,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351580.911,"N":9968515.7391,"dia":2200,"u":5.5,"v":2.75},{"id":"PL2","E":351583.8538,"N":9968511.0926,"dia":2200,"u":5.5,"v":-2.75},{"id":"PL3","E":351576.2645,"N":9968512.7962,"dia":2200,"u":0.0,"v":2.75},{"id":"PL4","E":351579.2074,"N":9968508.1498,"dia":2200,"u":0.0,"v":-2.75},{"id":"PL5","E":351571.6181,"N":9968509.8534,"dia":2200,"u":-5.5,"v":2.75},{"id":"PL6","E":351574.5609,"N":9968505.2069,"dia":2200,"u":-5.5,"v":-2.75}],"rev":{"old":1221.03,"oldTop":1315.43,"date":"19 Nov 2026"}},{"n":11,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351599.1387,"N":9968476.6804,"level":1218.638,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":0.007,"colTop":1313.416,"corners":[{"id":"O1","ring":"Outer","E":351600.5495,"N":9968480.0597,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351599.8596,"N":9968480.2146,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351595.6355,"N":9968477.5392,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351595.4806,"N":9968476.8493,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351597.7279,"N":9968473.3011,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351598.4178,"N":9968473.1462,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351602.6419,"N":9968475.8216,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351602.7968,"N":9968476.5115,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351600.1756,"N":9968479.5287,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351599.9706,"N":9968479.5747,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351596.1665,"N":9968477.1653,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351596.1205,"N":9968476.9604,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351598.1018,"N":9968473.8321,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351598.3068,"N":9968473.7861,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351602.1109,"N":9968476.1955,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351602.1569,"N":9968476.4004,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351602.3138,"N":9968481.9465,"dia":2200,"u":5.5,"v":2.75},{"id":"PL2","E":351605.2566,"N":9968477.3,"dia":2200,"u":5.5,"v":-2.75},{"id":"PL3","E":351597.6673,"N":9968479.0036,"dia":2200,"u":0.0,"v":2.75},{"id":"PL4","E":351600.6102,"N":9968474.3572,"dia":2200,"u":0.0,"v":-2.75},{"id":"PL5","E":351593.0209,"N":9968476.0608,"dia":2200,"u":-5.5,"v":2.75},{"id":"PL6","E":351595.9637,"N":9968471.4143,"dia":2200,"u":-5.5,"v":-2.75}],"rev":{"old":1220.14,"oldTop":1314.91,"date":"19 Nov 2026"}},{"n":12,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351620.5414,"N":9968442.888,"level":1223.36,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":-0.007,"colTop":1312.935,"corners":[{"id":"O1","ring":"Outer","E":351621.9522,"N":9968446.2673,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351621.2623,"N":9968446.4222,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351617.0382,"N":9968443.7468,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351616.8833,"N":9968443.0569,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351619.1306,"N":9968439.5087,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351619.8205,"N":9968439.3538,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351624.0446,"N":9968442.0292,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351624.1995,"N":9968442.7191,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351621.5783,"N":9968445.7363,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351621.3733,"N":9968445.7823,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351617.5692,"N":9968443.3729,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351617.5232,"N":9968443.168,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351619.5045,"N":9968440.0397,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351619.7095,"N":9968439.9937,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351623.5136,"N":9968442.4031,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351623.5596,"N":9968442.608,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351623.7165,"N":9968448.1541,"dia":2200,"u":5.5,"v":2.75},{"id":"PL2","E":351626.6593,"N":9968443.5076,"dia":2200,"u":5.5,"v":-2.75},{"id":"PL3","E":351619.07,"N":9968445.2112,"dia":2200,"u":0.0,"v":2.75},{"id":"PL4","E":351622.0129,"N":9968440.5648,"dia":2200,"u":0.0,"v":-2.75},{"id":"PL5","E":351614.4235,"N":9968442.2684,"dia":2200,"u":-5.5,"v":2.75},{"id":"PL6","E":351617.3664,"N":9968437.6219,"dia":2200,"u":-5.5,"v":-2.75}]},{"n":13,"base":"B4","baseSize":"14.6 x 9.1 x 3.0","E":351641.9441,"N":9968409.0956,"level":1223.13,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":-0.006,"colTop":1312.46,"corners":[{"id":"O1","ring":"Outer","E":351643.3549,"N":9968412.4749,"u":3,"v":2.1},{"id":"O2","ring":"Outer","E":351642.665,"N":9968412.6298,"u":2.5,"v":2.6},{"id":"O3","ring":"Outer","E":351638.4409,"N":9968409.9544,"u":-2.5,"v":2.6},{"id":"O4","ring":"Outer","E":351638.286,"N":9968409.2645,"u":-3,"v":2.1},{"id":"O5","ring":"Outer","E":351640.5333,"N":9968405.7163,"u":-3,"v":-2.1},{"id":"O6","ring":"Outer","E":351641.2232,"N":9968405.5614,"u":-2.5,"v":-2.6},{"id":"O7","ring":"Outer","E":351645.4473,"N":9968408.2368,"u":2.5,"v":-2.6},{"id":"O8","ring":"Outer","E":351645.6022,"N":9968408.9267,"u":3,"v":-2.1},{"id":"I1","ring":"Inner","E":351642.981,"N":9968411.9439,"u":2.4,"v":1.851},{"id":"I2","ring":"Inner","E":351642.776,"N":9968411.9899,"u":2.251,"v":2},{"id":"I3","ring":"Inner","E":351638.9719,"N":9968409.5805,"u":-2.251,"v":2},{"id":"I4","ring":"Inner","E":351638.9259,"N":9968409.3756,"u":-2.4,"v":1.851},{"id":"I5","ring":"Inner","E":351640.9072,"N":9968406.2473,"u":-2.4,"v":-1.851},{"id":"I6","ring":"Inner","E":351641.1122,"N":9968406.2013,"u":-2.251,"v":-2},{"id":"I7","ring":"Inner","E":351644.9163,"N":9968408.6107,"u":2.251,"v":-2},{"id":"I8","ring":"Inner","E":351644.9623,"N":9968408.8156,"u":2.4,"v":-1.851}],"piles":[{"id":"PL1","E":351645.1191,"N":9968414.3617,"dia":2200,"u":5.5,"v":2.75},{"id":"PL2","E":351648.062,"N":9968409.7152,"dia":2200,"u":5.5,"v":-2.75},{"id":"PL3","E":351640.4727,"N":9968411.4188,"dia":2200,"u":0.0,"v":2.75},{"id":"PL4","E":351643.4155,"N":9968406.7724,"dia":2200,"u":-0.0,"v":-2.75},{"id":"PL5","E":351635.8262,"N":9968408.476,"dia":2200,"u":-5.5,"v":2.75},{"id":"PL6","E":351638.7691,"N":9968403.8295,"dia":2200,"u":-5.5,"v":-2.75}]},{"n":14,"base":"B3","baseSize":"12.6 x 8.1 x 2.75","E":351663.3197,"N":9968375.2861,"level":1231.05,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":-0.01,"colTop":1311.98,"corners":[{"id":"O1","ring":"Outer","E":351664.891,"N":9968378.412,"u":3,"v":1.8},{"id":"O2","ring":"Outer","E":351664.2011,"N":9968378.5668,"u":2.5,"v":2.3},{"id":"O3","ring":"Outer","E":351659.977,"N":9968375.8915,"u":-2.5,"v":2.3},{"id":"O4","ring":"Outer","E":351659.8222,"N":9968375.2016,"u":-3,"v":1.8},{"id":"O5","ring":"Outer","E":351661.7484,"N":9968372.1602,"u":-3,"v":-1.8},{"id":"O6","ring":"Outer","E":351662.4383,"N":9968372.0054,"u":-2.5,"v":-2.3},{"id":"O7","ring":"Outer","E":351666.6624,"N":9968374.6807,"u":2.5,"v":-2.3},{"id":"O8","ring":"Outer","E":351666.8172,"N":9968375.3706,"u":3,"v":-1.8},{"id":"I1","ring":"Inner","E":351664.5171,"N":9968377.881,"u":2.4,"v":1.551},{"id":"I2","ring":"Inner","E":351664.3122,"N":9968377.927,"u":2.251,"v":1.7},{"id":"I3","ring":"Inner","E":351660.508,"N":9968375.5176,"u":-2.251,"v":1.7},{"id":"I4","ring":"Inner","E":351660.462,"N":9968375.3126,"u":-2.4,"v":1.551},{"id":"I5","ring":"Inner","E":351662.1223,"N":9968372.6912,"u":-2.4,"v":-1.551},{"id":"I6","ring":"Inner","E":351662.3272,"N":9968372.6452,"u":-2.251,"v":-1.7},{"id":"I7","ring":"Inner","E":351666.1314,"N":9968375.0546,"u":2.251,"v":-1.7},{"id":"I8","ring":"Inner","E":351666.1774,"N":9968375.2596,"u":2.4,"v":-1.551}],"piles":[{"id":"PL1","E":351665.9175,"N":9968379.5947,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351668.3253,"N":9968375.793,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351662.1158,"N":9968377.1869,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351664.5236,"N":9968373.3852,"dia":1800,"u":-0.0,"v":-2.25},{"id":"PL5","E":351658.3142,"N":9968374.7791,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351660.722,"N":9968370.9775,"dia":1800,"u":-4.5,"v":-2.25}]},{"n":15,"base":"B5","baseSize":"12.6 x 8.1 x 2.75","E":351684.7765,"N":9968341.528,"level":1239.84,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":-0.014,"colTop":1311.5,"corners":[{"id":"O1","ring":"Outer","E":351686.5618,"N":9968344.3159,"u":3,"v":1.4},{"id":"O2","ring":"Outer","E":351685.8719,"N":9968344.4708,"u":2.5,"v":1.9},{"id":"O3","ring":"Outer","E":351681.6478,"N":9968341.7955,"u":-2.5,"v":1.9},{"id":"O4","ring":"Outer","E":351681.493,"N":9968341.1055,"u":-3,"v":1.4},{"id":"O5","ring":"Outer","E":351682.9912,"N":9968338.7401,"u":-3,"v":-1.4},{"id":"O6","ring":"Outer","E":351683.6811,"N":9968338.5852,"u":-2.5,"v":-1.9},{"id":"O7","ring":"Outer","E":351687.9052,"N":9968341.2605,"u":2.5,"v":-1.9},{"id":"O8","ring":"Outer","E":351688.06,"N":9968341.9505,"u":3,"v":-1.4},{"id":"I1","ring":"Inner","E":351686.1879,"N":9968343.7849,"u":2.4,"v":1.151},{"id":"I2","ring":"Inner","E":351685.983,"N":9968343.8309,"u":2.251,"v":1.3},{"id":"I3","ring":"Inner","E":351682.1788,"N":9968341.4216,"u":-2.251,"v":1.3},{"id":"I4","ring":"Inner","E":351682.1328,"N":9968341.2166,"u":-2.4,"v":1.151},{"id":"I5","ring":"Inner","E":351683.3651,"N":9968339.2711,"u":-2.4,"v":-1.151},{"id":"I6","ring":"Inner","E":351683.57,"N":9968339.2251,"u":-2.251,"v":-1.3},{"id":"I7","ring":"Inner","E":351687.3742,"N":9968341.6344,"u":2.251,"v":-1.3},{"id":"I8","ring":"Inner","E":351687.4202,"N":9968341.8394,"u":2.4,"v":-1.151}],"piles":[{"id":"PL1","E":351687.3742,"N":9968345.8366,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351689.782,"N":9968342.0349,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351683.5726,"N":9968343.4288,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351685.9804,"N":9968339.6271,"dia":1800,"u":-0.0,"v":-2.25},{"id":"PL5","E":351679.7709,"N":9968341.021,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351682.1787,"N":9968337.2193,"dia":1800,"u":-4.5,"v":-2.25}]},{"n":16,"base":"B5","baseSize":"12.6 x 8.1 x 2.75","E":351706.125,"N":9968307.7013,"level":1241.92,"thk":2.75,"shaft":"Hollow octagonal","gradeFlag":"OK","gradeDiff":-0.013,"colTop":1311.025,"corners":[{"id":"O1","ring":"Outer","E":351707.9103,"N":9968310.4892,"u":3,"v":1.4},{"id":"O2","ring":"Outer","E":351707.2204,"N":9968310.6441,"u":2.5,"v":1.9},{"id":"O3","ring":"Outer","E":351702.9963,"N":9968307.9688,"u":-2.5,"v":1.9},{"id":"O4","ring":"Outer","E":351702.8415,"N":9968307.2788,"u":-3,"v":1.4},{"id":"O5","ring":"Outer","E":351704.3397,"N":9968304.9134,"u":-3,"v":-1.4},{"id":"O6","ring":"Outer","E":351705.0296,"N":9968304.7585,"u":-2.5,"v":-1.9},{"id":"O7","ring":"Outer","E":351709.2537,"N":9968307.4338,"u":2.5,"v":-1.9},{"id":"O8","ring":"Outer","E":351709.4085,"N":9968308.1238,"u":3,"v":-1.4},{"id":"I1","ring":"Inner","E":351707.5364,"N":9968309.9582,"u":2.4,"v":1.151},{"id":"I2","ring":"Inner","E":351707.3315,"N":9968310.0042,"u":2.251,"v":1.3},{"id":"I3","ring":"Inner","E":351703.5273,"N":9968307.5949,"u":-2.251,"v":1.3},{"id":"I4","ring":"Inner","E":351703.4813,"N":9968307.3899,"u":-2.4,"v":1.151},{"id":"I5","ring":"Inner","E":351704.7136,"N":9968305.4444,"u":-2.4,"v":-1.151},{"id":"I6","ring":"Inner","E":351704.9185,"N":9968305.3984,"u":-2.251,"v":-1.3},{"id":"I7","ring":"Inner","E":351708.7227,"N":9968307.8077,"u":2.251,"v":-1.3},{"id":"I8","ring":"Inner","E":351708.7687,"N":9968308.0127,"u":2.4,"v":-1.151}],"piles":[{"id":"PL1","E":351708.7228,"N":9968312.0099,"dia":1800,"u":4.5,"v":2.25},{"id":"PL2","E":351711.1306,"N":9968308.2083,"dia":1800,"u":4.5,"v":-2.25},{"id":"PL3","E":351704.9211,"N":9968309.6021,"dia":1800,"u":-0.0,"v":2.25},{"id":"PL4","E":351707.3289,"N":9968305.8005,"dia":1800,"u":0.0,"v":-2.25},{"id":"PL5","E":351701.1195,"N":9968307.1943,"dia":1800,"u":-4.5,"v":2.25},{"id":"PL6","E":351703.5273,"N":9968303.3927,"dia":1800,"u":-4.5,"v":-2.25}]},{"n":17,"base":"B6","baseSize":"9.1 x 9.1 x 3.0","E":351727.597,"N":9968273.9528,"level":1259.96,"thk":3.0,"shaft":"Hollow octagonal","gradeFlag":"minor","gradeDiff":-0.052,"colTop":1310.51,"corners":[{"id":"O1","ring":"Outer","E":351729.5429,"N":9968276.4873,"u":3,"v":1.1},{"id":"O2","ring":"Outer","E":351728.8529,"N":9968276.6422,"u":2.5,"v":1.6},{"id":"O3","ring":"Outer","E":351724.6289,"N":9968273.9668,"u":-2.5,"v":1.6},{"id":"O4","ring":"Outer","E":351724.474,"N":9968273.2769,"u":-3,"v":1.1},{"id":"O5","ring":"Outer","E":351725.6511,"N":9968271.4183,"u":-3,"v":-1.1},{"id":"O6","ring":"Outer","E":351726.3411,"N":9968271.2634,"u":-2.5,"v":-1.6},{"id":"O7","ring":"Outer","E":351730.5651,"N":9968273.9388,"u":2.5,"v":-1.6},{"id":"O8","ring":"Outer","E":351730.72,"N":9968274.6287,"u":3,"v":-1.1},{"id":"I1","ring":"Inner","E":351729.2001,"N":9968276.0005,"u":2.45,"v":0.872},{"id":"I2","ring":"Inner","E":351728.9547,"N":9968276.0556,"u":2.272,"v":1.05},{"id":"I3","ring":"Inner","E":351725.1156,"N":9968273.6241,"u":-2.272,"v":1.05},{"id":"I4","ring":"Inner","E":351725.0605,"N":9968273.3787,"u":-2.45,"v":0.872},{"id":"I5","ring":"Inner","E":351725.9939,"N":9968271.9051,"u":-2.45,"v":-0.872},{"id":"I6","ring":"Inner","E":351726.2393,"N":9968271.85,"u":-2.272,"v":-1.05},{"id":"I7","ring":"Inner","E":351730.0784,"N":9968274.2815,"u":2.272,"v":-1.05},{"id":"I8","ring":"Inner","E":351730.1335,"N":9968274.5269,"u":2.45,"v":-0.872}],"piles":[{"id":"PL1","E":351731.3917,"N":9968273.101,"dia":2200,"u":2.75,"v":-2.75},{"id":"PL2","E":351728.4488,"N":9968277.7474,"dia":2200,"u":2.75,"v":2.75},{"id":"PL3","E":351723.8023,"N":9968274.8046,"dia":2200,"u":-2.75,"v":2.75},{"id":"PL4","E":351726.7452,"N":9968270.1581,"dia":2200,"u":-2.75,"v":-2.75}]},{"n":18,"base":"B2","baseSize":"9.0 x 8.1 x 2.75","E":351748.9845,"N":9968240.1508,"level":1278.22,"thk":2.75,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":-0.018,"colTop":1311.82,"corners":[{"id":"C1","ring":"Centre","E":351751.3077,"N":9968241.6222,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351746.6613,"N":9968238.6794,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351750.1038,"N":9968243.523,"dia":1800,"u":2.75,"v":2.25},{"id":"PL2","E":351751.3077,"N":9968241.6222,"dia":1800,"u":2.75,"v":-0.0},{"id":"PL3","E":351752.5116,"N":9968239.7214,"dia":1800,"u":2.75,"v":-2.25},{"id":"PL4","E":351745.4574,"N":9968240.5802,"dia":1800,"u":-2.75,"v":2.25},{"id":"PL5","E":351747.8652,"N":9968236.7785,"dia":1800,"u":-2.75,"v":-2.25},{"id":"PL6","E":351746.6613,"N":9968238.6793,"dia":1800,"u":-2.75,"v":-0.0}]},{"n":19,"base":"B1","baseSize":"9.7 x 3.0 x 3.0","E":351770.3599,"N":9968206.3412,"level":1288.1,"thk":3.0,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":-0.012,"colTop":1311.35,"corners":[{"id":"C1","ring":"Centre","E":351772.6831,"N":9968207.8126,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351768.0367,"N":9968204.8698,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351772.6831,"N":9968207.8126,"dia":2200,"u":2.75,"v":-0.0},{"id":"PL2","E":351768.0367,"N":9968204.8697,"dia":2200,"u":-2.75,"v":-0.0}]},{"n":20,"base":"B1","baseSize":"9.7 x 3.0 x 3.0","E":351791.7899,"N":9968172.566,"level":1294.93,"thk":3.0,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":-0.016,"colTop":1310.87,"corners":[{"id":"C1","ring":"Centre","E":351794.1131,"N":9968174.0374,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351789.4667,"N":9968171.0946,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351794.1131,"N":9968174.0374,"dia":2200,"u":2.75,"v":-0.0},{"id":"PL2","E":351789.4666,"N":9968171.0946,"dia":2200,"u":-2.75,"v":0.0}]},{"n":21,"base":"B1","baseSize":"9.7 x 3.0 x 3.0","E":351813.1925,"N":9968138.7736,"level":1298.39,"thk":3.0,"shaft":"Circular x2, dia 2.2 m @ 5.5 m c/c","gradeFlag":"OK","gradeDiff":-0.02,"colTop":1310.39,"corners":[{"id":"C1","ring":"Centre","E":351815.5157,"N":9968140.245,"u":2.75,"v":0},{"id":"C2","ring":"Centre","E":351810.8693,"N":9968137.3022,"u":-2.75,"v":0}],"piles":[{"id":"PL1","E":351815.5157,"N":9968140.245,"dia":2200,"u":2.75,"v":-0.0},{"id":"PL2","E":351810.8693,"N":9968137.3022,"dia":2200,"u":-2.75,"v":0.0}]}],"abut":[{"name":"Abutment A","E":351362.9871,"N":9968849.5372,"piles":[{"id":"PL1","E":351366.3451,"N":9968854.3274,"dia":1500,"u":5.4,"v":2.25},{"id":"PL2","E":351368.7529,"N":9968850.5257,"dia":1500,"u":5.4,"v":-2.25},{"id":"PL3","E":351361.7832,"N":9968851.438,"dia":1500,"u":0.0,"v":2.25},{"id":"PL4","E":351364.191,"N":9968847.6364,"dia":1500,"u":0.0,"v":-2.25},{"id":"PL5","E":351357.2212,"N":9968848.5487,"dia":1500,"u":-5.4,"v":2.25},{"id":"PL6","E":351359.629,"N":9968844.747,"dia":1500,"u":-5.4,"v":-2.25}]},{"name":"Abutment B","E":351835.2904,"N":9968103.8236,"piles":[{"id":"PL1","E":351838.6485,"N":9968108.6137,"dia":1500,"u":5.4,"v":2.25},{"id":"PL2","E":351841.0563,"N":9968104.8121,"dia":1500,"u":5.4,"v":-2.25},{"id":"PL3","E":351834.0865,"N":9968105.7244,"dia":1500,"u":-0.0,"v":2.25},{"id":"PL4","E":351836.4943,"N":9968101.9227,"dia":1500,"u":-0.0,"v":-2.25},{"id":"PL5","E":351829.5246,"N":9968102.835,"dia":1500,"u":-5.4,"v":2.25},{"id":"PL6","E":351831.9324,"N":9968099.0334,"dia":1500,"u":-5.4,"v":-2.25}]}]};
+const TH = DATA.theta*Math.PI/180, UX=Math.cos(TH), UY=Math.sin(TH), VX=-UY, VY=UX;
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f4=v=>v==null?'–':Number(v).toFixed(4), f3=v=>v==null?'–':Number(v).toFixed(3), f2=v=>v==null?'–':Number(v).toFixed(2);
+const mm=v=>v==null?'–':((v>=0?'+':'')+Math.round(v*1000)+' mm');
+
+/* ---------- design lookup ---------- */
+const structures = [...DATA.piers.map(p=>({key:'P'+p.n,label:'Pier '+p.n,pier:p})), ...DATA.abut.map((a,i)=>({key:'A'+i,label:a.name,abut:a}))];
+const TOL_DEFAULT={pile:75,shaft:20,centre:20,level:10};
+function loadLS(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function saveLS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let tol = Object.assign({},TOL_DEFAULT,loadLS('nithi_tol',{}));
+
+function elementsFor(s){
+  if(s.abut) return [{k:'pile',name:'Pile',tolKey:'pile',pts:s.abut.piles.map(p=>({id:p.id,E:p.E,N:p.N,Z:null,extra:'Ø'+p.dia+' mm · across '+f2(p.u)+' · along '+f2(p.v)}))}];
+  const p=s.pier, headZ=+(p.level-p.thk).toFixed(3);
+  const circ=p.shaft.startsWith('Circular');
+  return [
+    {k:'pile',name:'Pile',tolKey:'pile',zNote:'Pile head = base top − '+p.thk.toFixed(2)+' m; toe = head − design length (calculated)',pts:p.piles.map(q=>({id:q.id,E:q.E,N:q.N,Z:headZ,extra:'Ø'+q.dia+' mm · across '+f2(q.u)+' · along '+f2(q.v)}))},
+    {k:'shaft',name:circ?'Column':'Shaft',tolKey:'shaft',zNote:'Level = top of base',pts:p.corners.map(c=>({id:c.id,E:c.E,N:c.N,Z:p.level,extra:(c.ring==='Outer'?'Outer corner':c.ring==='Inner'?'Inner corner':'Column centre')}))},
+    {k:'centre',name:'Centre',tolKey:'centre',pts:[{id:'CTR',E:p.E,N:p.N,Z:null,extra:'Centre of base'}]},
+    {k:'level',name:'Level',tolKey:'level',pts:[{id:'BASE',E:null,N:null,Z:p.level,extra:'Top of base, from elevation sheets'}]}
+  ];
+}
+//CALC-START
+function compare(d,m,tolMm){
+  const r={dE:null,dN:null,rad:null,u:null,v:null,dZ:null,okH:null,okZ:null,status:'none'};
+  if(m.E!=null&&m.N!=null&&d.E!=null&&d.N!=null){
+    r.dE=m.E-d.E; r.dN=m.N-d.N; r.rad=Math.hypot(r.dE,r.dN);
+    r.u=r.dE*UX+r.dN*UY; r.v=r.dE*VX+r.dN*VY; r.okH=r.rad*1000<=tolMm.h;
+  }
+  if(m.Z!=null&&d.Z!=null){ r.dZ=m.Z-d.Z; r.okZ=Math.abs(r.dZ)*1000<=tolMm.z; }
+  const flags=[r.okH,r.okZ].filter(x=>x!==null);
+  r.status=!flags.length?'none':flags.every(Boolean)?'ok':'bad';
+  return r;
+}
+//CALC-END
+
+/* ---------- storage: Claude db when available, else this phone ---------- */
+let readings=[], store={mode:'local',col:null};
+function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone'; }
+let offlineReady=false;
+async function initStore(){
+  readings=loadLS('nithi_readings',[]); sortR(); setBadge();
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  render();
+}
+function addReading(r){
+  readings.unshift(r); sortR();
+  if(store.mode==='db') store.col.doc(r.id).set(r).catch(()=>{store.mode='local';setBadge();saveLS('nithi_readings',readings)});
+  else saveLS('nithi_readings',readings);
+}
+function delReading(id){
+  readings=readings.filter(r=>r.id!==id);
+  if(store.mode==='db') store.col.doc(id).delete().catch(()=>{}); else saveLS('nithi_readings',readings);
+}
+function clearReadings(){ const ids=readings.map(r=>r.id); readings=[]; if(store.mode==='db') ids.forEach(id=>store.col.doc(id).delete().catch(()=>{})); else saveLS('nithi_readings',[]); }
+
+/* ---------- state ---------- */
+const S={tab:'check',sKey:'P4',el:'pile',pt:'PL1',logFilter:'all',confirmClear:false,csv:null,expanded:null};
+const curStruct=()=>structures.find(s=>s.key===S.sKey);
+function curElement(){ const els=elementsFor(curStruct()); let e=els.find(x=>x.k===S.el); if(!e){e=els[0];S.el=e.k} let p=e.pts.find(x=>x.id===S.pt); if(!p){p=e.pts[0];S.pt=p.id} return {e,p,els}; }
+const parseNum=v=>{const t=String(v).trim().replace(',','.'); if(t==='')return null; const n=parseFloat(t); return isFinite(n)?n:null};
+const loggedIds=()=>new Set(readings.filter(r=>r.sKey===S.sKey&&r.el===S.el).map(r=>r.pt));
+
+function pileLevelRows(s,pt){
+  const piles=s.pier?s.pier.piles:s.abut.piles, q=piles.find(x=>x.id===pt.id); if(!q) return '';
+  const r=pileRecord(s,q);
+  return `<dt>Book name</dt><dd>${r.no}</dd><dt>Design pile length</dt><dd>${r.len!=null?r.len.toFixed(2)+' m':'—'}</dd><dt>Design pile toe level</dt><dd>${r.toe!=null?f3(r.toe):'—'}</dd>`;
+}
+function casingCalc(s,pt){
+  const q=(s.pier?s.pier.piles:s.abut.piles).find(x=>x.id===pt.id); if(!q) return null;
+  const r=pileRecord(s,q), v=(REC_VAL['rec_'+s.key+'_'+q.id]||{}).casing, c=parseNum(v==null?'':v);
+  return {r,key:'rec_'+s.key+'_'+q.id,raw:v||'',c};
+}
+function casingHtml(s,pt){
+  const k=casingCalc(s,pt); if(!k) return '';
+  const {r,c}=k, ok=c!=null&&!isNaN(c);
+  return `<div class="lab">Casing</div><div><label for="cas">Casing top level (m)</label><input class="num" id="cas" inputmode="decimal" autocomplete="off" placeholder="12…" value="${esc(k.raw)}"></div><dl class="kv" id="casout">${casingOut(r,c,ok)}</dl>`;
+}
+function casingOut(r,c,ok){
+  return `<dt>Casing top to pile head</dt><dd>${ok&&r.head!=null?(c-r.head).toFixed(3)+' m':'—'}</dd><dt>Casing top to pile toe</dt><dd>${ok&&r.toe!=null?(c-r.toe).toFixed(3)+' m':'—'}</dd>`;
+}
+function wireCasing(s,pt){
+  const el=$('#cas'); if(!el) return;
+  el.oninput=()=>{const k=casingCalc(s,pt), key=k.key; REC_VAL[key]=Object.assign(REC_VAL[key]||{},{casing:el.value}); saveLS('nithi_rec',REC_VAL);
+    const c=parseNum(el.value); $('#casout').innerHTML=casingOut(k.r,c,c!=null&&!isNaN(c));};
+}
+/* ---------- CHECK ---------- */
+function renderCheck(){
+  const {e,p,els}=curElement(), s=curStruct(), done=loggedIds();
+  const flagged=s.pier&&s.pier.gradeFlag==='CHECK'&&(S.el==='level'||S.el==='pile'||S.el==='shaft');
+  $('#view').innerHTML=`
+  <section class="card">
+    <div><label for="sel">Pier or abutment</label>
+    <select id="sel">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}${x.pier?' · '+x.pier.base:''}</option>`).join('')}</select></div>
+    <div><div class="lab" style="margin-bottom:6px">What are you checking</div>
+    <div class="seg${els.length===1?' one':''}" id="els">${els.map(x=>`<button data-el="${x.k}" aria-pressed="${x.k===S.el}">${x.name}</button>`).join('')}</div></div>
+    ${e.pts.length>1?`<div><div class="lab" style="margin-bottom:6px">Point</div><div class="chips" id="pts">${e.pts.map(x=>`<button class="chip${done.has(x.id)?' done':''}" data-pt="${x.id}" aria-pressed="${x.id===S.pt}">${x.id}</button>`).join('')}</div></div>`:''}
+  </section>
+  ${flagged?`<div class="warnbox">The design level for ${esc(s.label)} is still under query: it does not fit the 1.19% deck grade. Treat level differences here with care until the designer issues the drawing.</div>`:''}
+  ${s.pier&&s.pier.rev&&(S.el==='level'||S.el==='pile'||S.el==='shaft')?`<div class="warnbox">Base level revised by the designer (${esc(s.pier.rev.date)}): ${f3(s.pier.rev.old)} before, ${f3(s.pier.level)} now. Not yet on an issued drawing. Confirm before finishing piles.</div>`:''}
+  <section class="card">
+    <div class="row"><b>${esc(s.label)} · ${esc(e.name)} ${esc(p.id)}</b><span class="tiny">${esc(p.extra||'')}</span></div>
+    <dl class="kv"><dt>Design Easting</dt><dd>${f4(p.E)}</dd><dt>Design Northing</dt><dd>${f4(p.N)}</dd><dt>${S.el==='pile'?'Design pile head level':'Design level'}</dt><dd>${f3(p.Z)}</dd>${S.el==='pile'?pileLevelRows(s,p):''}</dl>
+    ${p.Z!=null&&e.zNote?`<div class="hint">${esc(e.zNote)}</div>`:''}
+  </section>
+  ${S.el==='pile'?`<section class="card">${casingHtml(s,p)}<div class="hint">Measure the casing top level once the casing is set. The depths are what remains to dig from the casing top down to the pile head and the pile toe.</div></section>`:''}
+  <section class="card">
+    <div class="lab">Ground reading</div>
+    <div class="grid3">
+      <div><label for="mE">Easting</label><input class="num" id="mE" inputmode="decimal" autocomplete="off" placeholder="351…" ${p.E==null?'disabled':''}></div>
+      <div><label for="mN">Northing</label><input class="num" id="mN" inputmode="decimal" autocomplete="off" placeholder="9968…" ${p.N==null?'disabled':''}></div>
+      <div><label for="mZ">Level</label><input class="num" id="mZ" inputmode="decimal" autocomplete="off" placeholder="12…" ${p.Z==null?'disabled':''}></div>
+    </div>
+    <div id="result"></div>
+    <div><label for="note">Note</label><input id="note" autocomplete="off" placeholder="Optional, e.g. instrument, weather, remark"></div>
+    <button class="btn" id="save" disabled>Save reading</button>
+  </section>`;
+  $('#sel').onchange=ev=>{S.sKey=ev.target.value;S.el='pile';S.pt=null;render()};
+  $('#els').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.el=b.dataset.el;S.pt=null;render()};
+  const pts=$('#pts'); if(pts) pts.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.pt=b.dataset.pt;render()};
+  ['mE','mN','mZ'].forEach(id=>$('#'+id).oninput=updateResult);
+  $('#save').onclick=saveReading; updateResult(); if(S.el==='pile') wireCasing(s,p);
+}
+function readInputs(){return {E:parseNum($('#mE').value),N:parseNum($('#mN').value),Z:parseNum($('#mZ').value)}}
+function updateResult(){
+  const {e,p}=curElement(), m=readInputs();
+  const r=compare(p,m,{h:tol[e.tolKey],z:tol.level});
+  const el=$('#result');
+  const anyIn=m.E!=null||m.N!=null||m.Z!=null;
+  $('#save').disabled=!anyIn;
+  if(!anyIn){el.innerHTML='<div class="hint">Enter a reading to see the difference. Differences are ground minus design.</div>';return}
+  const partialH=(m.E!=null)!==(m.N!=null);
+  const pill=r.status==='ok'?'<span class="pill ok">Within tolerance</span>':r.status==='bad'?'<span class="pill bad">Out of tolerance</span>':'<span class="pill none">Need Easting and Northing</span>';
+  el.innerHTML=`<div class="row" style="margin-bottom:8px">${pill}<span class="tiny">tolerance ${p.E!=null?'±'+tol[e.tolKey]+' mm position':''}${p.E!=null&&p.Z!=null?' · ':''}${p.Z!=null?'±'+tol.level+' mm level':''}</span></div>
+  <div class="res">
+    ${r.rad!=null?`<div class="cell ${r.okH?'ok':'bad'}"><b>${Math.round(r.rad*1000)} mm</b><span>Horizontal offset</span></div>`:''}
+    ${r.dZ!=null?`<div class="cell ${r.okZ?'ok':'bad'}"><b>${mm(r.dZ)}</b><span>Level, ground − design</span></div>`:''}
+    ${r.dE!=null?`<div class="cell"><b>${mm(r.dE)}</b><span>ΔEasting</span></div><div class="cell"><b>${mm(r.dN)}</b><span>ΔNorthing</span></div>
+    <div class="cell"><b>${mm(r.u)}</b><span>Across bridge (+ = NE)</span></div><div class="cell"><b>${mm(r.v)}</b><span>Along bridge (+ = towards Abutment A)</span></div>`:''}
+  </div>${partialH?'<div class="hint" style="margin-top:6px">Add both Easting and Northing to get the horizontal offset.</div>':''}`;
+}
+function saveReading(){
+  const s=curStruct(), {e,p}=curElement(), m=readInputs();
+  const r=compare(p,m,{h:tol[e.tolKey],z:tol.level});
+  const rec={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:new Date().toISOString(),sKey:S.sKey,struct:s.label,el:S.el,elName:e.name,pt:p.id,
+    mE:m.E,mN:m.N,mZ:m.Z,dE:p.E,dN:p.N,dZ:p.Z,eE:r.dE,eN:r.dN,rad:r.rad,across:r.u,along:r.v,eZ:r.dZ,status:r.status,note:$('#note').value.trim()};
+  addReading(rec);
+  const pts=e.pts, i=pts.findIndex(x=>x.id===p.id); if(i>=0&&i<pts.length-1) S.pt=pts[i+1].id;
+  render(); const sv=$('#save'); if(sv){sv.textContent='Saved. Next point ready';setTimeout(()=>{if($('#save'))$('#save').textContent='Save reading'},1800)}
+}
+
+/* ---------- LOG ---------- */
+function csvText(rows){
+  const H=['time','structure','element','point','meas_E','meas_N','meas_level','design_E','design_N','design_level','dE_mm','dN_mm','offset_mm','across_mm','along_mm','dLevel_mm','status','note'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"', mmv=v=>v==null?'':Math.round(v*1000);
+  return [H.join(',')].concat(rows.map(r=>[r.t,r.struct,r.elName,r.pt,r.mE,r.mN,r.mZ,r.dE,r.dN,r.dZ,mmv(r.eE),mmv(r.eN),mmv(r.rad),mmv(r.across),mmv(r.along),mmv(r.eZ),r.status,r.note].map(q).join(','))).join('\n');
+}
+async function exportCsv(){
+  const rows=readings.filter(r=>S.logFilter==='all'||r.sKey===S.logFilter), text=csvText(rows);
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    const a=document.createElement('a'); a.href=url; a.download='nithi-ground-check-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(e){ S.csv=text; render(); }
+}
+function renderLog(){
+  const keys=[...new Set(readings.map(r=>r.sKey))];
+  const rows=readings.filter(r=>S.logFilter==='all'||r.sKey===S.logFilter);
+  const nOk=rows.filter(r=>r.status==='ok').length, nBad=rows.filter(r=>r.status==='bad').length;
+  $('#view').innerHTML=`
+  <section class="card">
+    <div class="row"><b>${rows.length} reading${rows.length===1?'':'s'}</b><div class="stats"><span class="pill ok">${nOk} within</span><span class="pill bad">${nBad} out</span></div></div>
+    <div><label for="flt">Show</label><select id="flt"><option value="all">All piers</option>${keys.map(k=>`<option value="${k}"${k===S.logFilter?' selected':''}>${esc(structures.find(s=>s.key===k).label)}</option>`).join('')}</select></div>
+    <div class="row"><button class="btn ghost" id="exp" style="flex:1" ${rows.length?'':'disabled'}>Export CSV</button></div>
+    ${S.csv?`<div><div class="lab" style="margin-bottom:6px">Copy this into a file named .csv</div><textarea class="csv" id="csvbox" readonly>${esc(S.csv)}</textarea><button class="btn" id="cp" style="margin-top:8px;width:100%">Copy</button></div>`:''}
+  </section>
+  <section class="card">${rows.length?rows.map(r=>`
+    <div class="logrow" data-id="${r.id}">
+      <div class="row"><b>${esc(r.struct)} · ${esc(r.elName)} ${esc(r.pt)}</b><span class="pill ${r.status==='ok'?'ok':r.status==='bad'?'bad':'none'}">${r.status==='ok'?'Within':r.status==='bad'?'Out':'No result'}</span></div>
+      <div class="tiny">${new Date(r.t).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})}</div>
+      <div class="mono" style="font-size:13px">${r.rad!=null?'offset '+Math.round(r.rad*1000)+' mm (E '+mm(r.eE)+', N '+mm(r.eN)+')':''}${r.rad!=null&&r.eZ!=null?' · ':''}${r.eZ!=null?'level '+mm(r.eZ):''}</div>
+      ${r.note?`<div class="tiny">${esc(r.note)}</div>`:''}
+      <div class="row"><span class="tiny mono">E ${f4(r.mE)} · N ${f4(r.mN)} · Z ${f3(r.mZ)}</span>
+      ${S.expanded===r.id?`<button class="btn danger" data-del="${r.id}" style="min-height:38px">Delete</button>`:`<button class="btn ghost" data-ask="${r.id}" style="min-height:38px">Delete…</button>`}</div>
+    </div>`).join(''):'<div class="hint">No readings yet. Save one from the Check tab and it appears here.</div>'}
+  </section>`;
+  $('#flt').onchange=ev=>{S.logFilter=ev.target.value;S.csv=null;render()};
+  $('#exp').onclick=exportCsv;
+  const cp=$('#cp'); if(cp) cp.onclick=async()=>{try{await navigator.clipboard.writeText(S.csv);cp.textContent='Copied'}catch(e){const b=$('#csvbox');b.select();cp.textContent='Selected. Use Copy on your phone'}};
+  $('#view').onclick=ev=>{const a=ev.target.closest('[data-ask]'),d=ev.target.closest('[data-del]');
+    if(a){S.expanded=a.dataset.ask;render()} else if(d){delReading(d.dataset.del);S.expanded=null;render()}};
+}
+
+/* ---------- DESIGN ---------- */
+function renderDesign(){
+  const s=curStruct(), els=elementsFor(s);
+  let body='';
+  if(s.pier){
+    const p=s.pier;
+    body+=`<section class="card"><b>${esc(s.label)}</b>
+    <dl class="kv"><dt>Base</dt><dd>${p.base} · ${esc(p.baseSize)} m</dd><dt>Shaft</dt><dd>${esc(p.shaft)}</dd><dt>Centre E</dt><dd>${f4(p.E)}</dd><dt>Centre N</dt><dd>${f4(p.N)}</dd>
+    <dt>Top of base</dt><dd>${f3(p.level)}</dd><dt>Pile head (calc)</dt><dd>${f3(p.level-p.thk)}</dd><dt>Top of column (calc)</dt><dd>${f3(p.colTop)}</dd>${p.rev?`<dt>Previous base level</dt><dd>${f3(p.rev.old)}</dd><dt>Change</dt><dd>${(p.level-p.rev.old>=0?'+':'')+(p.level-p.rev.old).toFixed(3)} m</dd>`:''}</dl>
+    ${p.gradeFlag==='CHECK'?`<div class="warnbox">Level under query: base level plus column height is ${f2(Math.abs(p.gradeDiff))} m ${p.gradeDiff>0?'above':'below'} the 1.19% deck grade.</div>`:''}</section>`;
+  }
+  els.filter(e=>e.k==='pile'||e.k==='shaft').forEach(e=>{
+    body+=`<section class="card"><b>${esc(e.name)} coordinates</b><div class="hint">Tap a row to check that point.</div><div class="tablewrap"><table><thead><tr><th>Point</th><th>Easting</th><th>Northing</th></tr></thead><tbody>
+    ${e.pts.map(q=>`<tr class="tap" data-go="${e.k}|${q.id}"><td>${q.id}</td><td>${f4(q.E)}</td><td>${f4(q.N)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  });
+  $('#view').innerHTML=`<section class="card"><div><label for="dsel">Pier or abutment</label><select id="dsel">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div></section>`+body+
+   `<div class="hint">Pile points here are numbered by position. The Pile record tab shows the book name (e.g. PR7-PL6) for each one.</div>`;
+  $('#dsel').onchange=ev=>{S.sKey=ev.target.value;S.el='pile';S.pt=null;render()};
+  $('#view').onclick=ev=>{const r=ev.target.closest('[data-go]');if(!r)return;const [k,id]=r.dataset.go.split('|');S.el=k;S.pt=id;S.tab='check';render()};
+}
+
+/* ---------- PILE RECORD ---------- */
+const PILE_LEN={A0:25,B1:null,P1:20,P2:20,P3:25,P4:25,P5:22,P6:25,P7:25,P8:27,P9:27,P10:30,P11:30,P12:30,P13:28,P14:25,P15:27,P16:21,P17:25,P18:20,P19:20,P20:20,P21:25,A1:23.5};
+const FORM_PROJECT='Realignment of Nithi Bridge along Embu–Meru (A9) Road';
+const FORM_CONTRACTOR='China Wu Yi Co. Ltd (JV with Howard Humphreys (EA) Ltd)';
+function bookPileName(s,q){
+  const list=(s.pier?s.pier.piles:s.abut.piles).slice();
+  const sgn=s.abut&&s.abut.name==='Abutment A'?1:-1;
+  list.sort((a,b)=>(Math.round(b.v*100)-Math.round(a.v*100))||sgn*(Math.round(a.u*100)-Math.round(b.u*100)));
+  const i=list.findIndex(x=>x.id===q.id)+1;
+  const pre=s.pier?'PR'+s.pier.n:(s.abut.name==='Abutment A'?'AA':'AB');
+  return pre+'-PL'+i;
+}
+const REINF={A0:[36,156,15],P1:[56,130,13],P2:[42,115,11],P3:[42,158,15],P4:[56,158,15],P5:[42,140,14],P6:[42,157,15],P7:[42,158,15],P8:[56,169,16],P9:[56,167,16],P10:[56,185,18],P11:[56,184,18],P12:[56,185,18],P13:[56,173,17],P14:[42,155,15],P15:[42,169,16],P16:[42,135,13],P17:[56,157,15],P18:[42,129,13],P19:[56,129,13],P20:[56,129,13],P21:[56,157,15],A1:[36,148,14]};
+function sheetNo(key){return key==='A0'?103:key==='A1'?125:103+(+key.slice(1))}
+function barsFor(dia,key){
+  const x=REINF[key];
+  if(x) return {main:x[0]+'T25 equally spaced (sheet '+sheetNo(key)+')',spiral:'T10 @ 175 outer rings ('+x[1]+' no.); T25 @ 2000 inner rings ('+x[2]+' no.)'};
+  return {main:'See pile reinforcement sheet',spiral:'See pile reinforcement sheet'};
+}
+function pileRecord(s,q){
+  const key=s.key, len=PILE_LEN[key], isP=!!s.pier;
+  const head=isP?+(s.pier.level-s.pier.thk).toFixed(3):null;
+  const toe=(head!=null&&len!=null)?+(head-len).toFixed(3):null;
+  const b=barsFor(q.dia,key);
+  const sheet=isP?(103+s.pier.n):(s.abut.name==='Abutment A'?'103':'125');
+  return {
+    structure:s.label+(isP?' · base '+s.pier.base+' '+s.pier.baseSize+' m':''),
+    no:bookPileName(s,q), dia:q.dia, conc:'C25/30 (bored cast in-situ pile, note 5.3.3)',
+    head, len, toe, main:b.main, spiral:b.spiral, cover:'75 mm against natural ground (note 6.2.1)',
+    sheet:'Pile reinforcement sheet '+sheet+' (verify)', E:q.E, N:q.N
+  };
+}
+let REC_VAL=loadLS('nithi_rec',{});
+function recText(r,extra){
+  return ['HAND-DUG PILE CONSTRUCTION RECORD','Project: '+FORM_PROJECT,'Contractor: '+FORM_CONTRACTOR,'Pile No. on Layout Plan: '+r.no,
+  'Pile Diameter: '+r.dia+' mm','Concrete Class: '+r.conc,'Pile Head Level: '+(r.head!=null?f2(r.head)+' m (calculated)':'-'),
+  'Design Pile Length: '+(r.len!=null?r.len+' m':'-'),'Pile Toe Level: '+(r.toe!=null?f2(r.toe)+' m (calculated)':'-'),
+  'Main Reinforcement: '+r.main,'Spiral / ring bars: '+r.spiral,'Easting/Northing: '+f4(r.E)+' / '+f4(r.N)].join('\n');
+}
+function progressCsv(){
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const rows=[['pile_name','status','depth_to_date_m','casing_level_m','date_updated','remarks']];
+  structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
+    const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!v||!(v.status||v.depth||v.casing||v.qual)) return;
+    rows.push([bookPileName(s,p),v.status||'Not started',v.depth||'',v.casing||'',v.upd||'',v.qual||'']);
+  });});
+  return rows.map(r=>r.map(q).join(',')).join('\n');
+}
+async function exportProgress(){
+  const text=progressCsv();
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    const a=document.createElement('a'); a.href=url; a.download='nithi-pile-progress-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(e){ S.pcsv=text; render(); }
+}
+function renderHand(){
+  const s=curStruct(), els=elementsFor(s), pe=els.find(e=>e.k==='pile');
+  const piles=s.pier?s.pier.piles:s.abut.piles;
+  if(!S.recPile||!piles.find(x=>x.id===S.recPile)) S.recPile=piles[0].id;
+  const q=piles.find(x=>x.id===S.recPile), r=pileRecord(s,q);
+  const names=piles.map(x=>({id:x.id,n:bookPileName(s,x)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}));
+  const row=(k,v,n)=>`<dt>${k}</dt><dd>${v}</dd>`;
+  const warn=[]; if(s.pier&&s.pier.gradeFlag==='CHECK') warn.push('Level under query for this pier (see Design tab): confirm the base level, and so the pile head level, with the engineer before excavating.');
+  if(s.pier&&s.pier.rev) warn.push('Base level revised by the designer ('+s.pier.rev.date+'): was '+s.pier.rev.old.toFixed(3)+', now '+s.pier.level.toFixed(3)+'. Not yet on an issued drawing. The pile head and toe levels shown here use the revised level.');
+  if(r.head==null) warn.push('Pile head level for abutments is not given in the book. Take it from the pile cap bottom level on the abutment sheets.');
+  const key='rec_'+s.key+'_'+q.id, v=REC_VAL[key]||{};
+  const fld=(id,lab,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-f="${id}" value="${esc(v[id]||'')}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  $('#view').innerHTML=`${recSwitch()}<section class="card"><div class="row"><div style="flex:1"><label for="rs">Pier or abutment</label><select id="rs">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div>
+  <div style="flex:1"><label for="rp">Pile</label><select id="rp">${names.map(x=>`<option value="${x.id}"${x.id===S.recPile?' selected':''}>${x.n}</option>`).join('')}</select></div></div></section>
+  ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
+  <section class="card"><b>Fill-in values for the form</b><div class="hint">From the book of drawings, or calculated from it.</div>
+  <dl class="kv"><dt>Project</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Contractor</dt><dd>${esc(FORM_CONTRACTOR)}</dd>
+  <dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Structure</dt><dd>${esc(r.structure)}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Concrete Class</dt><dd>${esc(r.conc)}</dd>
+  <dt>Pile Head Level</dt><dd>${r.head!=null?f2(r.head)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd><dt>Pile Toe Level</dt><dd>${r.toe!=null?f2(r.toe)+' m (calc)':'—'}</dd>
+  <dt>Main Reinforcement</dt><dd>${esc(r.main)}</dd><dt>Spiral / ring bars</dt><dd>${esc(r.spiral)}</dd><dt>Cover</dt><dd>${esc(r.cover)}</dd><dt>Pile centre E</dt><dd>${f4(r.E)}</dd><dt>Pile centre N</dt><dd>${f4(r.N)}</dd></dl>
+  <div class="hint">${esc(r.sheet)}. Rebar cage length and lining type are not stated in the book; take them from the engineer or the approved method statement.</div>
+  <button class="btn ghost" id="rcp">Copy these values</button><div class="hint" id="rmsg"></div></section>
+  <section class="card"><b>Site entries (saved on this device)</b>
+  <div><label for="status">Status</label><select id="status" data-f="status">${['Not started','Digging','Reached toe','Concreted'].map(o=>`<option${(v.status||'Not started')===o?' selected':''}>${o}</option>`).join('')}</select></div>${fld('casing','Casing top level (m)','')}<dl class="kv" id="rcas">${casingOut(r,parseNum(v.casing||''),!!v.casing&&!isNaN(parseNum(v.casing)))}</dl>${fld('lining','Lining / casing type','e.g. concrete ring, thickness')}${fld('cage','Rebar cage length (m)','')}${fld('open','Shaft opening level','')}${fld('start','Excavation start date','')}${fld('end','Completion date','')}${fld('meth','Excavation method','')}${fld('spec','Special measures','')}${fld('depth','Depth to date (m)','')}${fld('strata','Ground strata / groundwater','')}${fld('qual','Quality record / remarks','')}
+  <div class="hint">Staged excavation depths and strata: use the Check tab for levels, then write them here. Water table and RQD are on sheet 56.</div></section>
+  <section class="card"><b>Pile progress export</b><div class="hint">One row per pile that has a status, depth, casing level or remark. The columns match the Piles layer in the geodatabase: join on pile_name.</div>
+  <button class="btn" id="pexp">Export pile progress CSV</button>
+  ${S.pcsv?`<textarea class="csv" id="pbox" readonly>${esc(S.pcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
+  wireSwitch();
+  $('#rs').onchange=e=>{S.sKey=e.target.value;S.recPile=null;render()};
+  $('#rp').onchange=e=>{S.recPile=e.target.value;render()};
+  $('#view').onchange=null;
+  $('#view').oninput=e=>{const f=e.target.dataset.f;if(!f)return;REC_VAL[key]=Object.assign(REC_VAL[key]||{},{[f]:e.target.value,upd:new Date().toISOString().slice(0,10)});saveLS('nithi_rec',REC_VAL);if(f==='casing'){const c=parseNum(e.target.value);$('#rcas').innerHTML=casingOut(r,c,c!=null&&!isNaN(c))}};
+  $('#pexp').onclick=exportProgress;
+  $('#rcp').onclick=async()=>{const t=recText(r);try{await navigator.clipboard.writeText(t);$('#rmsg').textContent='Copied.'}catch(e){$('#rmsg').textContent='Copy not allowed here; select the values above.'}};
+}
+
+/* ---------- BORED PILE RECORD ---------- */
+let BP_VAL=loadLS('nithi_bp',{});
+const bnum=x=>{const n=parseNum(x==null?'':String(x));return (n==null||isNaN(n))?null:n};
+function bpBars(dia,key){const x=REINF[key];if(!x)return {bars:'',links:''};return {bars:x[0]+'T25 equally spaced',links:'T10 @ 175 outer ring ('+x[1]+' no.); T25 @ 2000 inner ring ('+x[2]+' no.)'}}
+function recSwitch(){return `<section class="card"><div class="seg" id="recsw" style="grid-template-columns:1fr 1fr"><button data-rf="hand" aria-pressed="${S.recForm!=='bored'}">Hand-dug record</button><button data-rf="bored" aria-pressed="${S.recForm==='bored'}">Bored pile record</button></div></section>`}
+function wireSwitch(){const el=$('#recsw');if(el)el.onclick=e=>{const b=e.target.closest('[data-rf]');if(!b)return;S.recForm=b.dataset.rf;render();window.scrollTo(0,0)}}
+function bpCalc(r,q,v){
+  const g=x=>(v[x]!=null&&v[x]!=='')?v[x]:'';
+  const ground=bnum(g('ground')), cut=bnum(g('cutoff')!==''?g('cutoff'):(r.head!=null?r.head:'')), toe=bnum(g('toe'));
+  const pen=(ground!=null&&toe!=null)?ground-toe:null, hole=(cut!=null&&toe!=null)?cut-toe:null;
+  const dv=r.len!=null?Math.PI*Math.pow(q.dia/2000,2)*r.len:null, mv=bnum(g('vol'));
+  const ratio=(dv&&mv!=null)?mv/dv:null;
+  return {ground,cut,toe,pen,hole,dv,mv,ratio};
+}
+function bpCalcHtml(r,q,v){
+  const c=bpCalc(r,q,v), m=x=>x==null?'—':x.toFixed(3)+' m';
+  return `<dt>Penetration (ground level − toe level)</dt><dd>${m(c.pen)}</dd><dt>Hole depth (cut-off level − toe level)</dt><dd>${m(c.hole)}</dd>
+  <dt>Design volume (area × design length)</dt><dd>${c.dv!=null?c.dv.toFixed(2)+' m³':'—'}</dd><dt>Measured / design volume</dt><dd>${c.ratio!=null?c.ratio.toFixed(2)+(c.ratio<1?' (less than design: check)':''):'—'}</dd>
+  ${(c.toe!=null&&r.toe!=null)?`<dt>Toe vs design toe</dt><dd>${(c.toe-r.toe>=0?'+':'')+(c.toe-r.toe).toFixed(3)} m</dd>`:''}`;
+}
+function bpText(s,q,r,v){
+  const c=bpCalc(r,q,v), f=x=>(v[x]!=null&&v[x]!=='')?v[x]:'-', n=x=>x==null?'-':x.toFixed(3);
+  const lg=(v.log||[]).filter(x=>x.d||x.t).map(x=>'  '+(x.d||'?')+' m: '+(x.t||'')).join('\n')||'  -';
+  return ['BORED PILE RECORD','Project: '+FORM_PROJECT,'Proj. Ref. No.: 6000104','Pile Ref No.: '+r.no,'Pile Size: '+q.dia+' mm','Time & Date of Casting: '+f('casting'),
+  'Ground Level: '+f('ground'),'Cut-Off Level: '+(f('cutoff')!=='-'?f('cutoff'):n(c.cut)),'Toe Level: '+f('toe'),'Penetration: '+n(c.pen),'Hole depth: '+n(c.hole),
+  'Boring started: '+f('bstart'),'Boring ended: '+f('bend'),'Steel casing size (mm): '+f('csize')+'  length (m): '+f('clen'),
+  'Reinforcement No./bar size: '+(f('bars')!=='-'?f('bars'):bpBars(q.dia,s.key).bars)+'  length (m): '+f('cage')+'  links: '+(f('links')!=='-'?f('links'):bpBars(q.dia,s.key).links),
+  'Concreting method: '+f('meth'),'Concrete grade: '+(f('grade')!=='-'?f('grade'):'C25/30'),'Vol. of concrete cast (m3): '+f('vol'),'Design volume (m3): '+(c.dv!=null?c.dv.toFixed(2):'-'),
+  'No. of cubes: '+f('cubes'),'Test cube ref: '+f('cuberef'),'Inspection CWY site rep: '+f('cwy'),'Site supervisor: '+f('sup'),'Bore log (depth, soil):',lg,'Comments: '+f('comments'),
+  'Prepared by (CWY): '+f('prep')+'  '+f('prepD'),'Confirmed by (HHEA): '+f('hhea')+'  '+f('hheaD'),'Confirmed by (KeNHA): '+f('kenha')+'  '+f('kenhaD')].join('\n');
+}
+function bpCsv(){
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const H=['pile_ref','pile_size_mm','casting','ground_level','cutoff_level','toe_level','penetration_m','hole_depth_m','boring_started','boring_ended','casing_size_mm','casing_length_m','bars','cage_length_m','links','method','grade','vol_cast_m3','design_vol_m3','cubes','cube_ref','cwy_site_rep','site_supervisor','bore_log','comments','prepared_by','prepared_date','hhea','hhea_date','kenha','kenha_date'];
+  const rows=[H];
+  structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
+    const v=BP_VAL['bp_'+s.key+'_'+p.id]; if(!v) return;
+    const has=Object.keys(v).some(k=>k!=='upd'&&k!=='log'&&v[k]!=='')||(v.log||[]).some(x=>x.d||x.t); if(!has) return;
+    const r=pileRecord(s,p), c=bpCalc(r,p,v), g=x=>v[x]!=null?v[x]:'', b=bpBars(p.dia,s.key);
+    rows.push([r.no,p.dia,g('casting'),g('ground'),g('cutoff')!==''?g('cutoff'):(r.head!=null?r.head.toFixed(3):''),g('toe'),c.pen!=null?c.pen.toFixed(3):'',c.hole!=null?c.hole.toFixed(3):'',g('bstart'),g('bend'),g('csize'),g('clen'),g('bars')!==''?g('bars'):b.bars,g('cage'),g('links')!==''?g('links'):b.links,g('meth'),g('grade')!==''?g('grade'):'C25/30',g('vol'),c.dv!=null?c.dv.toFixed(2):'',g('cubes'),g('cuberef'),g('cwy'),g('sup'),(v.log||[]).filter(x=>x.d||x.t).map(x=>(x.d||'')+' m: '+(x.t||'')).join('; '),g('comments'),g('prep'),g('prepD'),g('hhea'),g('hheaD'),g('kenha'),g('kenhaD')]);
+  });});
+  return rows.map(r=>r.map(q).join(',')).join('\n');
+}
+async function exportBP(){
+  const text=bpCsv();
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    const a=document.createElement('a'); a.href=url; a.download='nithi-bored-pile-records-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(e){ S.bcsv=text; render(); }
+}
+function renderBored(){
+  const s=curStruct(), piles=s.pier?s.pier.piles:s.abut.piles;
+  if(!S.recPile||!piles.find(x=>x.id===S.recPile)) S.recPile=piles[0].id;
+  const q=piles.find(x=>x.id===S.recPile), r=pileRecord(s,q), bb=bpBars(q.dia,s.key);
+  const names=piles.map(x=>({id:x.id,n:bookPileName(s,x)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}));
+  const key='bp_'+s.key+'_'+q.id; if(!BP_VAL[key]) BP_VAL[key]={}; const v=BP_VAL[key];
+  if(!v.log||!v.log.length) v.log=[{d:'',t:''},{d:'',t:''},{d:'',t:''},{d:'',t:''},{d:'',t:''},{d:'',t:''}];
+  const val=(id,def)=>(v[id]!=null&&v[id]!=='')?v[id]:(def==null?'':def);
+  const fld=(id,lab,def,type,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-b="${id}" ${type?'type="'+type+'"':'inputmode="text"'} value="${esc(val(id,def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  const nf=(id,lab,def,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-b="${id}" inputmode="decimal" value="${esc(val(id,def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  const warn=[]; if(s.pier&&s.pier.gradeFlag==='CHECK') warn.push('Level under query for this pier (see Design tab): confirm the base level, and so the cut-off and toe levels, with the engineer before finishing the pile.');
+  if(s.pier&&s.pier.rev) warn.push('Base level revised by the designer ('+s.pier.rev.date+'): was '+s.pier.rev.old.toFixed(3)+', now '+s.pier.level.toFixed(3)+'. Not yet on an issued drawing. The design cut-off and toe levels below use the revised level.');
+  if(r.head==null) warn.push('Cut-off level for abutments is not given in the book. Take it from the pile cap bottom level on the abutment sheets.');
+  $('#view').innerHTML=`${recSwitch()}
+  <section class="card"><div class="row"><div style="flex:1"><label for="rs">Pier or abutment</label><select id="rs">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div>
+  <div style="flex:1"><label for="rp">Pile</label><select id="rp">${names.map(x=>`<option value="${x.id}"${x.id===S.recPile?' selected':''}>${x.n}</option>`).join('')}</select></div></div></section>
+  ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
+  <section class="card"><b>BORED PILE RECORD: header</b><div class="hint">Filled from the book of drawings.</div>
+  <dl class="kv"><dt>Project Title</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Proj. Ref. No.</dt><dd>6000104</dd><dt>Pile Ref No.</dt><dd>${r.no}</dd><dt>Pile Size</dt><dd>${q.dia} mm</dd>
+  <dt>Design cut-off level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m':'—'}</dd><dt>Design toe level</dt><dd>${r.toe!=null?r.toe.toFixed(3)+' m':'—'}</dd><dt>Design pile length</dt><dd>${r.len!=null?r.len+' m':'—'}</dd></dl>
+  ${fld('casting','Time &amp; date of casting','', 'datetime-local')}</section>
+  <section class="card"><b>Boring details</b>
+  ${nf('ground','Ground level (m)','','e.g. 1233.5')}${nf('cutoff','Cut-off level (m)',r.head!=null?r.head.toFixed(3):'','design value filled in; change if told')}${nf('toe','Toe level (m), as built','', r.toe!=null?'design '+r.toe.toFixed(3):'')}
+  <dl class="kv" id="bpcalc">${bpCalcHtml(r,q,v)}</dl>
+  ${fld('bstart','Date &amp; time boring started','','datetime-local')}${fld('bend','Date &amp; time boring ended','','datetime-local')}</section>
+  <section class="card"><b>Bore pile detail</b>
+  <div class="lab">Steel casing</div>${nf('csize','Size (mm) diameter','','')}${nf('clen','Length (m)','','')}
+  <div class="hint">No steel casing size or length is given in the pile sheets, the notes or the pile design table in the book. Take them from the method statement or the engineer.</div>
+  <div class="lab">Reinforcement</div>${fld('bars','No. / bar size (mm)',bb.bars,null,'')}${nf('cage','Length (m)',r.len!=null?r.len.toFixed(1):'','')}${fld('links','Link size / spacing (mm)',bb.links,null,'')}
+  <div class="hint">Read from pile reinforcement sheet ${sheetNo(s.key)} of the book: main bars per pile, outer T10 rings and inner T25 stiffener rings, with the pile length from sheet 56. The cage runs into the pile cap by the anchorage shown on the sheet. The sheets still show the base levels from before the designer's revision.</div>
+  <div class="lab">Concreting</div>
+  <div><label for="meth">Concreting method</label><select id="meth" data-b="meth">${['','Dry','Tremie'].map(o=>`<option value="${o}"${val('meth')===o?' selected':''}>${o||'Select'}</option>`).join('')}</select></div>
+  ${fld('grade','Concrete grade (N/mm²)','C25/30',null,'')}${nf('vol','Vol. of concrete cast (m³)','','')}${nf('cubes','No. of cubes taken','','')}${fld('cuberef','Test cube ref. no.','',null,'')}</section>
+  <section class="card"><b>Bore log</b><div class="hint">Depth (m) and soil description, top to bottom.</div>
+  ${v.log.map((x,i)=>`<div class="row"><input data-lg="d" data-i="${i}" inputmode="decimal" placeholder="Depth (m)" value="${esc(x.d)}" style="flex:0 0 100px" aria-label="Depth ${i+1}"><input data-lg="t" data-i="${i}" placeholder="Soil description" value="${esc(x.t)}" aria-label="Soil ${i+1}"></div>`).join('')}
+  <button class="btn ghost" id="bpadd">Add a row</button></section>
+  <section class="card"><b>Inspection and comments</b>
+  ${fld('cwy','CWY site rep','',null,'')}${fld('sup','Site supervisor','',null,'')}
+  <div><label for="comments">Comments</label><textarea id="comments" data-b="comments" rows="3">${esc(val('comments'))}</textarea></div></section>
+  <section class="card"><b>Sign-off</b><div class="hint">Names and dates only. Signatures stay on the paper form.</div>
+  ${fld('prep','Prepared by (CWY site rep)','',null,'')}${fld('prepD','Date','','date')}${fld('hhea','Confirmed by (HHEA Ltd)','',null,'')}${fld('hheaD','Date','','date')}${fld('kenha','Confirmed by (KeNHA site rep)','',null,'')}${fld('kenhaD','Date','','date')}</section>
+  <section class="card"><b>Copy or export</b>
+  <button class="btn ghost" id="bpcp">Copy this record as text</button><div class="hint" id="bpmsg"></div>
+  <button class="btn" id="bpexp" style="margin-top:8px">Export all bored pile records (CSV)</button>
+  ${S.bcsv?`<textarea class="csv" readonly>${esc(S.bcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
+  wireSwitch();
+  $('#rs').onchange=e=>{S.sKey=e.target.value;S.recPile=null;render()};
+  $('#rp').onchange=e=>{S.recPile=e.target.value;render()};
+  const stamp=()=>{v.upd=new Date().toISOString().slice(0,10);saveLS('nithi_bp',BP_VAL)};
+  const onchg=e=>{const t=e.target;
+    if(t.dataset.b){v[t.dataset.b]=t.value;stamp();$('#bpcalc').innerHTML=bpCalcHtml(r,q,v)}
+    else if(t.dataset.lg){const i=+t.dataset.i;v.log[i][t.dataset.lg]=t.value;stamp()}};
+  $('#view').oninput=onchg; $('#view').onchange=onchg;
+  $('#bpadd').onclick=()=>{v.log.push({d:'',t:''});stamp();render()};
+  $('#bpexp').onclick=exportBP;
+  $('#bpcp').onclick=async()=>{try{await navigator.clipboard.writeText(bpText(s,q,r,v));$('#bpmsg').textContent='Copied.'}catch(e){$('#bpmsg').textContent='Copy not allowed here.'}};
+}
+function renderRecord(){ if(S.recForm==='bored') renderBored(); else renderHand(); }
+
+/* ---------- SETTINGS ---------- */
+function renderSettings(){
+  $('#view').innerHTML=`<section class="card"><b>Tolerances (mm)</b>
+    <div class="hint">Starting values only. Set them to your specification before relying on pass or fail.</div>
+    ${[['pile','Pile position (centre)'],['shaft','Shaft corner position'],['centre','Pier centre position'],['level','Level (all elements)']].map(([k,l])=>`<div><label for="t_${k}">${l}</label><input class="num" id="t_${k}" inputmode="numeric" value="${tol[k]}"></div>`).join('')}
+    <button class="btn" id="tsave">Save tolerances</button></section>
+  <section class="card"><b>Readings</b><div class="hint">Readings are kept on this phone only. Export a CSV regularly: clearing the browser site data or uninstalling the app removes them.</div>
+    <button class="btn ${S.confirmClear?'danger':'ghost'}" id="clr" ${readings.length?'':'disabled'}>${S.confirmClear?'Tap again to delete all '+readings.length+' readings':'Delete all readings'}</button></section>
+  <section class="card"><b>About the design data</b><div class="hint">Coordinates come from the Nithi setting-out DWG and the pier dimension workbook. Pile head and column top levels are calculated from the elevation sheets and the base thickness, not read from a pile drawing. Piers 5, 8, 10 and 11 use the designer's revised base levels of 19 Nov 2026 (not yet on an issued drawing). Piers 5 and 8 are still under query; Piers 3, 13 and 18 are waiting on the designer's answer on the bearing allowance.</div></section>`;
+  $('#tsave').onclick=()=>{['pile','shaft','centre','level'].forEach(k=>{const v=parseNum($('#t_'+k).value);if(v!=null&&v>=0)tol[k]=v});saveLS('nithi_tol',tol);$('#tsave').textContent='Saved'};
+  $('#clr').onclick=()=>{if(S.confirmClear){clearReadings();S.confirmClear=false}else S.confirmClear=true;render()};
+}
+
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.tab?'page':'false'));
+  $('#view').onclick=null;
+  ({check:renderCheck,log:renderLog,design:renderDesign,record:renderRecord,settings:renderSettings})[S.tab]();
+}
+$('#tabs').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.tab=b.dataset.tab;S.confirmClear=false;S.expanded=null;render();window.scrollTo(0,0)};
+render(); initStore();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{offlineReady=true;setBadge()}).catch(()=>{});
+}
+</script>
+
+</body>
+</html>

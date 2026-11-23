@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b5d73">
 <link rel="manifest" href="manifest.webmanifest">
@@ -179,10 +179,10 @@ function casingCalc(s,pt){
 function casingHtml(s,pt){
   const k=casingCalc(s,pt); if(!k) return '';
   const {r,c}=k, ok=c!=null&&!isNaN(c);
-  return `<div class="lab">Casing</div><div><label for="cas">Casing top level (m)</label><input class="num" id="cas" inputmode="decimal" autocomplete="off" placeholder="12…" value="${esc(k.raw)}"></div><dl class="kv" id="casout">${casingOut(r,c,ok)}</dl>`;
+  return `<div class="lab">Concrete lining</div><div><label for="cas">Concrete lining top level (m)</label><input class="num" id="cas" inputmode="decimal" autocomplete="off" placeholder="12…" value="${esc(k.raw)}"></div><dl class="kv" id="casout">${casingOut(r,c,ok)}</dl>`;
 }
 function casingOut(r,c,ok){
-  return `<dt>Casing top to pile head</dt><dd>${ok&&r.head!=null?(c-r.head).toFixed(3)+' m':'—'}</dd><dt>Casing top to pile toe</dt><dd>${ok&&r.toe!=null?(c-r.toe).toFixed(3)+' m':'—'}</dd>`;
+  return `<dt>Lining top to pile head</dt><dd>${ok&&r.head!=null?(c-r.head).toFixed(3)+' m':'—'}</dd><dt>Lining top to pile toe</dt><dd>${ok&&r.toe!=null?(c-r.toe).toFixed(3)+' m':'—'}</dd>`;
 }
 function wireCasing(s,pt){
   const el=$('#cas'); if(!el) return;
@@ -208,7 +208,7 @@ function renderCheck(){
     <dl class="kv"><dt>Design Easting</dt><dd>${f4(p.E)}</dd><dt>Design Northing</dt><dd>${f4(p.N)}</dd><dt>${S.el==='pile'?'Design pile head level':'Design level'}</dt><dd>${f3(p.Z)}</dd>${S.el==='pile'?pileLevelRows(s,p):''}</dl>
     ${p.Z!=null&&e.zNote?`<div class="hint">${esc(e.zNote)}</div>`:''}
   </section>
-  ${S.el==='pile'?`<section class="card">${casingHtml(s,p)}<div class="hint">Measure the casing top level once the casing is set. The depths are what remains to dig from the casing top down to the pile head and the pile toe.</div></section>`:''}
+  ${S.el==='pile'?`<section class="card">${casingHtml(s,p)}<div class="hint">Measure the concrete lining top level once the lining is cast. The depths are what remains to dig from the casing top down to the pile head and the pile toe.</div></section>`:''}
   <section class="card">
     <div class="lab">Ground reading</div>
     <div class="grid3">
@@ -358,10 +358,10 @@ function recText(r,extra){
 }
 function progressCsv(){
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
-  const rows=[['pile_name','status','depth_to_date_m','casing_level_m','date_updated','remarks']];
+  const rows=[['pile_name','status','depth_to_date_m','lining_top_level_m','date_updated','remarks']];
   structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
-    const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!v||!(v.status||v.depth||v.casing||v.qual)) return;
-    rows.push([bookPileName(s,p),v.status||'Not started',v.depth||'',v.casing||'',v.upd||'',v.qual||'']);
+    const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!v) return; const dd=hdVals(s,p,pileRecord(s,p),v).f.depth; if(!(v.status&&v.status!=='Not started'||dd||v.casing||v.qual)) return;
+    rows.push([bookPileName(s,p),v.status||'Not started',(hdVals(s,p,pileRecord(s,p),v).f.depth)||'',v.casing||'',v.upd||'',v.qual||'']);
   });});
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
@@ -373,41 +373,128 @@ async function exportProgress(){
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
   }catch(e){ S.pcsv=text; render(); }
 }
+const HD_ACT=['','Excavation','Lining','Excavation/Lining'];
+function hdVals(s,q,r,v){
+  const g=(k,d)=>(v[k]!=null&&v[k]!=='')?v[k]:(d==null?'':d);
+  let cum=0, last=null;
+  const rows=(v.stages||[]).map((x,i)=>{
+    const has=!!(x.d||x.a||x.s||x.m||x.g||x.q); const sd=bnum(x.s);
+    if(has){cum=Math.round((cum+(sd||0))*1000)/1000; last=cum}
+    return {n:i+1,date:x.d||'',act:x.a||'',stage:x.s||'',cum:has?cum:'',dia:x.m||'',strata:x.g||'',qual:x.q||'',has};
+  });
+  const dv=Math.PI*Math.pow(q.dia/2000,2)*(r.len!=null?r.len:0);
+  const x=REINF[s.key];
+  const f={recno:g('recno'),rdate:g('rdate'),conc:g('conc','C25/30'),head:r.head!=null?r.head.toFixed(3):'',dia:String(q.dia),toe:g('toe',r.toe!=null?r.toe.toFixed(3):''),
+    dlen:r.len!=null?String(r.len):'',alen:g('alen',last!=null?String(last):''),lining:g('lining','Concrete lining, cast every 1 m'),cage:g('cage',r.len!=null?String(r.len):''),bars:g('bars',x?x[0]+'T25':''),
+    start:g('start'),end:g('end'),depth:g('depth',last!=null?String(last):''),meth:g('meth'),open:g('open'),spec:g('spec'),
+    cfab:g('cfab'),cinst:g('cinst'),csec:g('csec'),cjoint:g('cjoint'),ccover:g('ccover','75'),cspacer:g('cspacer'),cinsp:g('cinsp'),
+    pdate:g('pdate'),pmeth:g('pmeth'),slump:g('slump'),dvol:g('dvol',r.len!=null?dv.toFixed(2):''),avol:g('avol'),cubes:g('cubes'),pstart:g('pstart'),pfinish:g('pfinish'),cprob:g('cprob'),
+    contr:g('contr'),contrD:g('contrD'),insp:g('insp'),inspD:g('inspD')};
+  const open=bnum(f.open), dep=bnum(f.depth), dtoe=r.toe, av=bnum(f.avol), dvn=bnum(f.dvol);
+  const calc={dep, reached:(open!=null&&dep!=null)?open-dep:null, need:(open!=null&&dtoe!=null)?open-dtoe:null,
+    remain:(open!=null&&dtoe!=null&&dep!=null)?(open-dtoe)-dep:null, ratio:(av!=null&&dvn)?av/dvn:null};
+  return {f,rows,calc,last};
+}
+function hdCalcHtml(s,q,r,v){
+  const c=hdVals(s,q,r,v).calc, m=x=>x==null?'—':x.toFixed(3)+' m';
+  return `<dt>Depth dug so far (cumulative)</dt><dd>${m(c.dep)}</dd><dt>Toe level reached (shaft opening level − depth)</dt><dd>${m(c.reached)}</dd>
+  <dt>Depth needed to design toe (opening level − design toe)</dt><dd>${m(c.need)}</dd><dt>Still to dig to design toe</dt><dd>${c.remain==null?'—':(c.remain<=0?'Design toe reached ('+(-c.remain).toFixed(3)+' m below it)':c.remain.toFixed(3)+' m')}</dd>
+  <dt>Concrete volume ratio (actual / design)</dt><dd>${c.ratio!=null?c.ratio.toFixed(2):'—'}</dd>`;
+}
+function hdHasData(v){return !!v&&(Object.keys(v).some(k=>k!=='upd'&&k!=='stages'&&k!=='status'&&v[k]!==''&&v[k]!=null)||(v.stages||[]).some(x=>x.d||x.a||x.s||x.m||x.g||x.q))}
+const HD_HEAD=['record_no','record_date','project','contractor','pile_no_on_layout_plan','concrete_class','pile_head_level_m','pile_diameter_mm','pile_toe_level_m','design_pile_length_m','actual_pile_length_m','lining_type','rebar_cage_length_m','main_reinforcement','excavation_start','excavation_completion_date','actual_shaft_depth_m','excavation_method','shaft_opening_level_m','special_excavation_measures','cage_fabrication_date','cage_installation_date','cage_section_details','jointing_method','cover_to_main_bars_mm','spacer_centraliser_details','cage_installation_inspection','pour_date','placing_method','slump_mm','design_vol_m3','actual_concrete_volume_m3','cube_test_sets_no','pour_start_time','pour_finish_time','concrete_volume_ratio','concreting_problems_remedial_action','contractor_signed','contractor_date','inspector','inspector_date'];
+const HD_STAGE_HEAD=['pile_no_on_layout_plan','no','date','activity','stage_depth_m','cumulative_depth_m','measured_pile_dia_mm','ground_strata_and_groundwater','quality_record'];
+function csvQ(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'}
+function hdEach(fn){structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!hdHasData(v)) return; fn(s,p,v,pileRecord(s,p))})})}
+function hdFormCsv(){
+  const rows=[HD_HEAD];
+  hdEach((s,p,v,r)=>{const {f,calc}=hdVals(s,p,r,v);
+    rows.push([f.recno,f.rdate,FORM_PROJECT,FORM_CONTRACTOR,r.no,f.conc,f.head,f.dia,f.toe,f.dlen,f.alen,f.lining,f.cage,f.bars,f.start,f.end,f.depth,f.meth,f.open,f.spec,f.cfab,f.cinst,f.csec,f.cjoint,f.ccover,f.cspacer,f.cinsp,f.pdate,f.pmeth,f.slump,f.dvol,f.avol,f.cubes,f.pstart,f.pfinish,calc.ratio!=null?calc.ratio.toFixed(2):'',f.cprob,f.contr,f.contrD,f.insp,f.inspD]);});
+  return rows.map(r=>r.map(csvQ).join(',')).join('\n');
+}
+function hdStagesCsv(){
+  const rows=[HD_STAGE_HEAD];
+  hdEach((s,p,v,r)=>{hdVals(s,p,r,v).rows.filter(x=>x.has).forEach(x=>rows.push([r.no,x.n,x.date,x.act,x.stage,x.cum,x.dia,x.strata,x.qual]))});
+  return rows.map(r=>r.map(csvQ).join(',')).join('\n');
+}
+async function saveCsv(name,text,stateKey){
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    const a=document.createElement('a'); a.href=url; a.download=name+'-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(e){ S[stateKey]=text; render(); }
+}
+function hdText(s,q,r,v){
+  const {f,rows,calc}=hdVals(s,q,r,v), d=x=>x===''||x==null?'-':x;
+  const st=rows.filter(x=>x.has).map(x=>'  '+x.n+'. '+d(x.date)+' | '+d(x.act)+' | stage '+d(x.stage)+' | cum '+d(x.cum)+' | dia '+d(x.dia)+' | '+d(x.strata)+' | '+d(x.qual)).join('\n')||'  -';
+  return ['HAND-DUG PILE CONSTRUCTION RECORD','Record No: '+d(f.recno),'Record Date: '+d(f.rdate),'Project: '+FORM_PROJECT,'Contractor: '+FORM_CONTRACTOR,
+  '1. PILE DETAILS','Pile No. on Layout Plan: '+r.no,'Concrete Class: '+d(f.conc),'Pile Head Level (m): '+d(f.head),'Pile Diameter (mm): '+f.dia,'Pile Toe Level (m): '+d(f.toe),'Design Pile Length (m): '+d(f.dlen),'Actual Pile Length (m): '+d(f.alen),'Lining Type: '+d(f.lining),'Rebar Cage Length (m): '+d(f.cage),'Main Reinforcement (Bar Size/No.): '+d(f.bars),
+  '2. PILE EXCAVATION RECORD','Excavation Start: '+d(f.start),'Excavation Completion Date: '+d(f.end),'Actual Shaft Depth (m): '+d(f.depth),'Excavation Method: '+d(f.meth),'Shaft Opening Level (m): '+d(f.open),'Special Excavation Measures: '+d(f.spec),
+  '3. STAGED EXCAVATION AND CONCRETE LINING RECORD',st,
+  '4. REINFORCEMENT CAGE','Cage Fabrication Date: '+d(f.cfab),'Cage Installation Date: '+d(f.cinst),'Cage Section Details: '+d(f.csec),'Jointing Method: '+d(f.cjoint),'Cover to Main Bars (mm): '+d(f.ccover),'Spacer/Centraliser Details: '+d(f.cspacer),'Cage Installation Inspection: '+d(f.cinsp),
+  '5. CONCRETING RECORD','Pour Date: '+d(f.pdate),'Placing Method: '+d(f.pmeth),'Slump (mm): '+d(f.slump),'Design Vol. (m3): '+d(f.dvol),'Actual Concrete Volume (m3): '+d(f.avol),'Cube Test Sets (No.): '+d(f.cubes),'Pour Start Time: '+d(f.pstart),'Pour Finish Time: '+d(f.pfinish),'Concrete Volume Ratio: '+(calc.ratio!=null?calc.ratio.toFixed(2):'-'),'Concreting Problems and Remedial Action: '+d(f.cprob),
+  'Contractor: '+d(f.contr)+'  Date: '+d(f.contrD),'Inspector: '+d(f.insp)+'  Date: '+d(f.inspD)].join('\n');
+}
 function renderHand(){
-  const s=curStruct(), els=elementsFor(s), pe=els.find(e=>e.k==='pile');
-  const piles=s.pier?s.pier.piles:s.abut.piles;
+  const s=curStruct(), piles=s.pier?s.pier.piles:s.abut.piles;
   if(!S.recPile||!piles.find(x=>x.id===S.recPile)) S.recPile=piles[0].id;
   const q=piles.find(x=>x.id===S.recPile), r=pileRecord(s,q);
   const names=piles.map(x=>({id:x.id,n:bookPileName(s,x)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}));
-  const row=(k,v,n)=>`<dt>${k}</dt><dd>${v}</dd>`;
   const warn=[]; if(s.pier&&s.pier.gradeFlag==='CHECK') warn.push('Level under query for this pier (see Design tab): confirm the base level, and so the pile head level, with the engineer before excavating.');
   if(s.pier&&s.pier.rev) warn.push('Base level revised by the designer ('+s.pier.rev.date+'): was '+s.pier.rev.old.toFixed(3)+', now '+s.pier.level.toFixed(3)+'. Not yet on an issued drawing. The pile head and toe levels shown here use the revised level.');
   if(r.head==null) warn.push('Pile head level for abutments is not given in the book. Take it from the pile cap bottom level on the abutment sheets.');
-  const key='rec_'+s.key+'_'+q.id, v=REC_VAL[key]||{};
-  const fld=(id,lab,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-f="${id}" value="${esc(v[id]||'')}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  const key='rec_'+s.key+'_'+q.id; if(!REC_VAL[key]) REC_VAL[key]={}; const v=REC_VAL[key];
+  if(!v.stages||!v.stages.length) v.stages=Array.from({length:8},()=>({d:'',a:'',s:'',m:'',g:'',q:''}));
+  const H=hdVals(s,q,r,v), F=H.f;
+  const fld=(id,lab,type,ph,def)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-f="${id}" ${type?'type="'+type+'"':'inputmode="text"'} value="${esc((v[id]!=null&&v[id]!=='')?v[id]:(def==null?'':def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  const nf=(id,lab,def,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-f="${id}" inputmode="decimal" value="${esc((v[id]!=null&&v[id]!=='')?v[id]:(def==null?'':def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
+  const rowsHtml=v.stages.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px"><div class="row" style="justify-content:space-between"><b>No. ${i+1}</b><span class="tiny">Cumulative depth: <b data-cum="${i}">${H.rows[i].cum===''?'—':H.rows[i].cum.toFixed(2)+' m'}</b></span></div>
+    <div class="row"><input type="date" data-st="d" data-i="${i}" value="${esc(x.d)}" aria-label="Date ${i+1}" style="flex:1"><select data-st="a" data-i="${i}" aria-label="Activity ${i+1}" style="flex:1">${HD_ACT.map(o=>`<option value="${o}"${x.a===o?' selected':''}>${o||'Activity'}</option>`).join('')}</select></div>
+    <div class="row"><input data-st="s" data-i="${i}" inputmode="decimal" placeholder="Stage depth (m), e.g. 1.0" value="${esc(x.s)}" aria-label="Stage depth ${i+1}" style="flex:1"><input data-st="m" data-i="${i}" inputmode="decimal" placeholder="Measured pile dia. (mm)" value="${esc(x.m)}" aria-label="Measured diameter ${i+1}" style="flex:1"></div>
+    <input data-st="g" data-i="${i}" placeholder="Ground strata and groundwater conditions" value="${esc(x.g)}" aria-label="Strata ${i+1}"><input data-st="q" data-i="${i}" placeholder="Quality record (verticality / diameter / lining)" value="${esc(x.q)}" aria-label="Quality ${i+1}"></div>`).join('');
   $('#view').innerHTML=`${recSwitch()}<section class="card"><div class="row"><div style="flex:1"><label for="rs">Pier or abutment</label><select id="rs">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div>
   <div style="flex:1"><label for="rp">Pile</label><select id="rp">${names.map(x=>`<option value="${x.id}"${x.id===S.recPile?' selected':''}>${x.n}</option>`).join('')}</select></div></div></section>
   ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
-  <section class="card"><b>Fill-in values for the form</b><div class="hint">From the book of drawings, or calculated from it.</div>
-  <dl class="kv"><dt>Project</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Contractor</dt><dd>${esc(FORM_CONTRACTOR)}</dd>
-  <dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Structure</dt><dd>${esc(r.structure)}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Concrete Class</dt><dd>${esc(r.conc)}</dd>
-  <dt>Pile Head Level</dt><dd>${r.head!=null?f2(r.head)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd><dt>Pile Toe Level</dt><dd>${r.toe!=null?f2(r.toe)+' m (calc)':'—'}</dd>
-  <dt>Main Reinforcement</dt><dd>${esc(r.main)}</dd><dt>Spiral / ring bars</dt><dd>${esc(r.spiral)}</dd><dt>Cover</dt><dd>${esc(r.cover)}</dd><dt>Pile centre E</dt><dd>${f4(r.E)}</dd><dt>Pile centre N</dt><dd>${f4(r.N)}</dd></dl>
-  <div class="hint">${esc(r.sheet)}. Rebar cage length and lining type are not stated in the book; take them from the engineer or the approved method statement.</div>
-  <button class="btn ghost" id="rcp">Copy these values</button><div class="hint" id="rmsg"></div></section>
-  <section class="card"><b>Site entries (saved on this device)</b>
-  <div><label for="status">Status</label><select id="status" data-f="status">${['Not started','Digging','Reached toe','Concreted'].map(o=>`<option${(v.status||'Not started')===o?' selected':''}>${o}</option>`).join('')}</select></div>${fld('casing','Casing top level (m)','')}<dl class="kv" id="rcas">${casingOut(r,parseNum(v.casing||''),!!v.casing&&!isNaN(parseNum(v.casing)))}</dl>${fld('lining','Lining / casing type','e.g. concrete ring, thickness')}${fld('cage','Rebar cage length (m)','')}${fld('open','Shaft opening level','')}${fld('start','Excavation start date','')}${fld('end','Completion date','')}${fld('meth','Excavation method','')}${fld('spec','Special measures','')}${fld('depth','Depth to date (m)','')}${fld('strata','Ground strata / groundwater','')}${fld('qual','Quality record / remarks','')}
-  <div class="hint">Staged excavation depths and strata: use the Check tab for levels, then write them here. Water table and RQD are on sheet 56.</div></section>
-  <section class="card"><b>Pile progress export</b><div class="hint">One row per pile that has a status, depth, casing level or remark. The columns match the Piles layer in the geodatabase: join on pile_name.</div>
-  <button class="btn" id="pexp">Export pile progress CSV</button>
-  ${S.pcsv?`<textarea class="csv" id="pbox" readonly>${esc(S.pcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
+  <section class="card"><b>HAND-DUG PILE CONSTRUCTION RECORD</b><div class="hint">One sheet per pile. Values from the book are filled in; change any of them if the engineer tells you to.</div>
+  <dl class="kv"><dt>Project</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Contractor</dt><dd>${esc(FORM_CONTRACTOR)}</dd><dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Pile Head Level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd></dl>
+  ${fld('recno','Record No.','','')}${fld('rdate','Record date','date','')}</section>
+  <section class="card"><b>1. Pile details</b>
+  ${fld('conc','Concrete Class','', '', 'C25/30')}${nf('toe','Pile Toe Level (m)',F.toe,'')}${nf('alen','Actual Pile Length (m)',F.alen,'')}${fld('lining','Lining Type','','',F.lining)}${nf('cage','Rebar Cage Length (m)',F.cage,'')}${fld('bars','Main Reinforcement (Bar Size/No.)','',F.bars,F.bars)}
+  <div class="hint">Bars from pile reinforcement sheet ${sheetNo(s.key)}; cage length defaults to the design pile length. The cage runs into the pile cap by the anchorage on the sheet.</div></section>
+  <section class="card"><b>2. Pile excavation record</b>
+  ${fld('start','Excavation Start','date','')}${fld('end','Excavation Completion Date','date','')}${fld('meth','Excavation Method','','')}${nf('open','Shaft Opening Level (m)','','e.g. 1280.711')}${nf('depth','Actual Shaft Depth (m)',F.depth,'')}${fld('spec','Special Excavation Measures (collapse, water ingress, running sand, boulders, obstructions)','','')}
+  <dl class="kv" id="hdcalc">${hdCalcHtml(s,q,r,v)}</dl></section>
+  <section class="card"><b>3. Staged excavation and concrete lining record</b><div class="hint">The top of the pile is concrete lining (not steel casing). The lining is cast every 1 m, so enter each 1 m stage as its own row with its date. Cumulative depth is the running total of the stage depths. Up to 34 rows.</div>
+  <div id="hdrows">${rowsHtml}</div>${v.stages.length<34?'<button class="btn ghost" id="hdadd">Add a row</button>':''}</section>
+  <section class="card"><b>4. Reinforcement cage fabrication and installation</b>
+  ${fld('cfab','Cage Fabrication Date','date','')}${fld('cinst','Cage Installation Date','date','')}${fld('csec','Cage Section Details','','')}${fld('cjoint','Jointing Method','','')}${nf('ccover','Cover to Main Bars (mm)','75','')}${fld('cspacer','Spacer / Centraliser Details','','')}${fld('cinsp','Cage Installation Inspection (verticality, level, centring, joint quality)','','')}</section>
+  <section class="card"><b>5. Concreting record</b>
+  ${fld('pdate','Pour Date','date','')}${fld('pmeth','Placing Method','','')}${nf('slump','Slump (mm)','','')}${nf('dvol','Design Vol. (m³)',F.dvol,'')}${nf('avol','Actual Concrete Volume (m³)','','')}${nf('cubes','Cube Test Sets (No.)','','')}${fld('pstart','Pour Start Time','time','')}${fld('pfinish','Pour Finish Time','time','')}
+  ${fld('cprob','Concreting Problems and Remedial Action (pipe blockage, segregation, pile discontinuity)','','')}</section>
+  <section class="card"><b>Sign-off</b><div class="hint">Names and dates only. Signatures stay on the paper form.</div>
+  ${fld('contr','Contractor','','')}${fld('contrD','Date','date','')}${fld('insp','Inspector','','')}${fld('inspD','Date','date','')}</section>
+  <section class="card"><b>Status and concrete lining top (for progress tracking)</b>
+  <div><label for="status">Status</label><select id="status" data-f="status">${['Not started','Digging','Reached toe','Concreted'].map(o=>`<option${(v.status||'Not started')===o?' selected':''}>${o}</option>`).join('')}</select></div>
+  ${fld('casing','Concrete lining top level (m)','','')}<dl class="kv" id="rcas">${casingOut(r,parseNum(v.casing||''),!!v.casing&&!isNaN(parseNum(v.casing)))}</dl>${fld('qual','Progress remarks','','')}</section>
+  <section class="card"><b>Copy or export</b>
+  <button class="btn ghost" id="rcp">Copy this record as text</button><div class="hint" id="rmsg"></div>
+  <div class="hint" style="margin-top:8px">The pile record CSV has one row per pile with the same fields and order as the form. The staged excavation CSV has one row per stage, with the pile number to match.</div>
+  <button class="btn" id="hexp" style="margin-top:8px">Export pile records (CSV)</button><button class="btn ghost" id="hexs" style="margin-top:8px">Export staged excavation (CSV)</button><button class="btn ghost" id="pexp" style="margin-top:8px">Export pile progress (CSV, for the geodatabase)</button>
+  ${(S.hcsv||S.pcsv)?`<textarea class="csv" readonly>${esc(S.hcsv||S.pcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
   wireSwitch();
   $('#rs').onchange=e=>{S.sKey=e.target.value;S.recPile=null;render()};
   $('#rp').onchange=e=>{S.recPile=e.target.value;render()};
-  $('#view').onchange=null;
-  $('#view').oninput=e=>{const f=e.target.dataset.f;if(!f)return;REC_VAL[key]=Object.assign(REC_VAL[key]||{},{[f]:e.target.value,upd:new Date().toISOString().slice(0,10)});saveLS('nithi_rec',REC_VAL);if(f==='casing'){const c=parseNum(e.target.value);$('#rcas').innerHTML=casingOut(r,c,c!=null&&!isNaN(c))}};
+  const stamp=()=>{v.upd=new Date().toISOString().slice(0,10);saveLS('nithi_rec',REC_VAL)};
+  const refresh=()=>{const H2=hdVals(s,q,r,v);H2.rows.forEach((x,i)=>{const el=document.querySelector('[data-cum="'+i+'"]');if(el)el.textContent=x.cum===''?'—':x.cum.toFixed(2)+' m'});$('#hdcalc').innerHTML=hdCalcHtml(s,q,r,v)};
+  const onchg=e=>{const t=e.target;
+    if(t.dataset.f){v[t.dataset.f]=t.value;stamp();if(t.dataset.f==='casing'){const c=parseNum(t.value);$('#rcas').innerHTML=casingOut(r,c,c!=null&&!isNaN(c))}else refresh()}
+    else if(t.dataset.st){v.stages[+t.dataset.i][t.dataset.st]=t.value;stamp();refresh()}};
+  $('#view').oninput=onchg; $('#view').onchange=onchg;
+  const add=$('#hdadd'); if(add) add.onclick=()=>{for(let i=0;i<4&&v.stages.length<34;i++) v.stages.push({d:'',a:'',s:'',m:'',g:'',q:''});stamp();render()};
+  $('#hexp').onclick=()=>{S.hcsv=null;saveCsv('nithi-hand-dug-pile-records',hdFormCsv(),'hcsv')};
+  $('#hexs').onclick=()=>{S.hcsv=null;saveCsv('nithi-hand-dug-staged-excavation',hdStagesCsv(),'hcsv')};
   $('#pexp').onclick=exportProgress;
-  $('#rcp').onclick=async()=>{const t=recText(r);try{await navigator.clipboard.writeText(t);$('#rmsg').textContent='Copied.'}catch(e){$('#rmsg').textContent='Copy not allowed here; select the values above.'}};
+  $('#rcp').onclick=async()=>{try{await navigator.clipboard.writeText(hdText(s,q,r,v));$('#rmsg').textContent='Copied.'}catch(e){$('#rmsg').textContent='Copy not allowed here.'}};
 }
 
 /* ---------- BORED PILE RECORD ---------- */

@@ -141,7 +141,7 @@ function compare(d,m,tolMm){
 /* ---------- storage: Claude db when available, else this phone ---------- */
 let readings=[], store={mode:'local',col:null};
 function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
-function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone'; }
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v11'; }
 let offlineReady=false;
 async function initStore(){
   readings=loadLS('nithi_readings',[]); sortR(); setBadge();
@@ -620,7 +620,10 @@ function renderSettings(){
   $('#clr').onclick=()=>{if(S.confirmClear){clearReadings();S.confirmClear=false}else S.confirmClear=true;render()};
 }
 
+const NAV_KEYS=['tab','sKey','el','pt','recPile','recForm','logFilter'];
+try{const nv=loadLS('nithi_nav',null); if(nv&&typeof nv==='object'&&structures.some(x=>x.key===nv.sKey)&&['check','log','design','record','settings'].includes(nv.tab)) NAV_KEYS.forEach(k=>{if(nv[k]!=null)S[k]=nv[k]})}catch(e){}
 function render(){
+  saveLS('nithi_nav',Object.fromEntries(NAV_KEYS.map(k=>[k,S[k]])));
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.tab?'page':'false'));
   $('#view').onclick=null;
   ({check:renderCheck,log:renderLog,design:renderDesign,record:renderRecord,settings:renderSettings})[S.tab]();

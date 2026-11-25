@@ -48,7 +48,7 @@ select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 .chip.done::after{content:" ✓";color:var(--ok)}
 .chip[aria-pressed="true"].done::after{color:var(--accent-ink)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:4px 14px;font-size:14px}
 .kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--mono);text-align:right;overflow-wrap:anywhere}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grid3>div{min-width:0;display:flex;flex-direction:column;gap:4px}
@@ -75,27 +75,100 @@ th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white
 th:first-child,td:first-child{text-align:left}
 td{font-family:var(--mono)} th{font-weight:500;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
 tr.tap{cursor:pointer}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);
   padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));z-index:5}
 nav button{min-height:48px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:500;border-radius:8px}
 nav button[aria-current="page"]{color:var(--accent);font-weight:600;background:var(--field)}
 .stats{display:flex;gap:8px;flex-wrap:wrap}
 textarea.csv{font-family:var(--mono);font-size:12px;min-height:140px}
 @media (prefers-reduced-motion:no-preference){.pill{transition:background .15s}}
+:root{--peg:#f2a33a;--peg-ink:#1f1400;--info:#2b6cb0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--info:#7db4ee}}
+:root[data-theme="dark"]{--info:#7db4ee}
+header{align-items:center}
+header h1{font-size:16px}
+/* where-am-I bar */
+.loc{position:sticky;top:0;z-index:4;background:var(--bg);margin:-6px -16px 0;padding:8px 16px 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.loc[hidden]{display:none}
+.locrow{display:flex;gap:8px;align-items:stretch}
+.step{flex:0 0 48px;min-height:56px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font-size:26px;line-height:1}
+.step:disabled{opacity:.3}
+.where{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px 0 0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font:inherit;text-align:left;overflow:hidden}
+.where .tag{flex:0 0 58px;align-self:stretch;display:flex;align-items:center;justify-content:center;background:var(--peg);color:var(--peg-ink);font-family:var(--mono);font-weight:500;font-size:26px;border-right:2px solid var(--ink)}
+.where .wt{flex:1;min-width:0;display:flex;flex-direction:column}
+.where .wt b{font-size:17px;font-weight:600;line-height:1.2}
+.where .wt i{font-style:normal;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.where .tri{display:inline-block;margin-left:8px;border-style:solid;border-width:0 12px 12px 0;border-color:transparent var(--warn) transparent transparent;vertical-align:middle}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.where svg{flex:0 0 18px;color:var(--muted)}
+.piles{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scroll-snap-type:x proximity;scrollbar-width:none}
+.piles::-webkit-scrollbar{display:none}
+.pc{flex:0 0 auto;scroll-snap-align:center;position:relative;min-width:62px;min-height:46px;padding:0 12px 4px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;font-family:var(--mono);font-size:14px}
+.pc[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.pc::after{content:"";position:absolute;left:8px;right:8px;bottom:4px;height:3px;border-radius:2px;background:transparent}
+.pc[data-st="dig"]::after{background:var(--warn)}
+.pc[data-st="toe"]::after{background:var(--info)}
+.pc[data-st="done"]::after{background:var(--ok)}
+.pc[aria-pressed="true"][data-st="dig"]::after{background:var(--peg)}
+.pc[aria-pressed="true"][data-st="toe"]::after,.pc[aria-pressed="true"][data-st="done"]::after{background:var(--accent-ink)}
+.pc[data-rd="1"]::before{content:"✓";position:absolute;top:2px;right:5px;font-size:11px;color:var(--ok)}
+.pc[aria-pressed="true"][data-rd="1"]::before{color:var(--accent-ink)}
+.pkey{font-size:11.5px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.pkey b{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+/* picker sheet */
+.shbk{position:fixed;inset:0;background:rgba(10,16,24,.5);z-index:20}
+.shp{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:88vh;overflow:auto;background:var(--bg);border-radius:16px 16px 0 0;border-top:1px solid var(--line);
+  padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.shh{display:flex;justify-content:space-between;align-items:center}
+.shh b{font-size:17px}
+.x{min-width:44px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;font-size:22px;line-height:1}
+.shg{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.sc{position:relative;min-height:54px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;font-family:var(--mono);font-size:17px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:4px 0 0;overflow:hidden}
+.sc[aria-current="true"]{background:var(--peg);border-color:var(--ink);color:var(--peg-ink)}
+.sc .pb{width:70%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.sc .pb i{display:block;height:100%;background:var(--ok)}
+.sc .fl{position:absolute;top:0;right:0;border-style:solid;border-width:0 14px 14px 0;border-color:transparent var(--warn) transparent transparent}
+.sab{grid-column:1/-1;min-height:54px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;font:inherit;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding:0 14px}
+.sab span{font-weight:400;font-size:12.5px;color:var(--muted)}
+.sab[aria-current="true"]{background:var(--peg);border-color:var(--ink);color:var(--peg-ink)}
+.sab[aria-current="true"] span{color:var(--peg-ink)}
+.shk{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.shk .tri{display:inline-block;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--warn) transparent transparent;vertical-align:middle;margin-right:4px}
+@media (prefers-reduced-motion:no-preference){.shp{animation:up .16s ease-out}.shbk{animation:fade .16s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.4}}@keyframes fade{from{opacity:0}}}
+/* collapsible form sections */
+details.acc{padding:0;gap:0}
+details.acc>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:0 12px;cursor:pointer;font-weight:600}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary .cnt{white-space:nowrap;font-family:var(--mono);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:auto}
+details.acc>summary .cnt.full{color:var(--ok)}
+details.acc>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:-4px 2px 0 4px;flex:0 0 auto}
+details.acc[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.acc[open]>summary{border-bottom:1px solid var(--line)}
+details.acc>.accbody{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.btn.sm{min-height:38px;font-size:13.5px;font-weight:500;padding:0 12px}
+/* bottom tabs */
+nav{grid-template-columns:repeat(5,1fr);gap:2px}
+nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;font-size:12px;position:relative}
+nav button svg{width:22px;height:22px}
+nav button[aria-current="page"]{background:transparent;box-shadow:inset 0 3px 0 var(--accent);border-radius:0 0 8px 8px}
+nav .n{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--peg);color:var(--peg-ink);font-size:11px;font-weight:600;line-height:18px;text-align:center}
+nav .n:empty{display:none}
 </style>
 
 </head>
 <body>
 <div class="wrap">
-  <header><div><h1>Nithi Ground Check</h1><div class="sub">Ground readings against design · Arc 1960 / UTM 37S</div></div><span class="badge" id="store">…</span></header>
+  <header><h1>Ground Check</h1><span class="badge" id="store">…</span></header>
+  <div class="loc" id="loc" hidden></div>
   <main id="view"></main>
 </div>
+<div id="sheet" hidden></div>
 <nav id="tabs" aria-label="Sections">
-  <button data-tab="check" aria-current="page">Check</button>
-  <button data-tab="log">Log</button>
-  <button data-tab="design">Design</button>
-  <button data-tab="record">Record</button>
-  <button data-tab="settings">Settings</button>
+  <button data-tab="check" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><span>Check</span></button>
+  <button data-tab="record"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/></svg><span>Record</span></button>
+  <button data-tab="design"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17L17 3l4 4L7 21H3z"/><path d="M13 7l4 4"/></svg><span>Design</span></button>
+  <button data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Log</span><span class="n" id="logn"></span></button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Settings</span></button>
 </nav>
 
 <script>
@@ -141,7 +214,7 @@ function compare(d,m,tolMm){
 /* ---------- storage: Claude db when available, else this phone ---------- */
 let readings=[], store={mode:'local',col:null};
 function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
-function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v12'; }
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v13'; }
 let offlineReady=false;
 async function initStore(){
   readings=loadLS('nithi_readings',[]); sortR(); setBadge();
@@ -194,17 +267,15 @@ function renderCheck(){
   const {e,p,els}=curElement(), s=curStruct(), done=loggedIds();
   const flagged=s.pier&&s.pier.gradeFlag==='CHECK'&&(S.el==='level'||S.el==='pile'||S.el==='shaft');
   $('#view').innerHTML=`
-  <section class="card">
-    <div><label for="sel">Pier or abutment</label>
-    <select id="sel">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}${x.pier?' · '+x.pier.base:''}</option>`).join('')}</select></div>
-    <div><div class="lab" style="margin-bottom:6px">What are you checking</div>
-    <div class="seg${els.length===1?' one':''}" id="els">${els.map(x=>`<button data-el="${x.k}" aria-pressed="${x.k===S.el}">${x.name}</button>`).join('')}</div></div>
-    ${e.pts.length>1?`<div><div class="lab" style="margin-bottom:6px">Point</div><div class="chips" id="pts">${e.pts.map(x=>`<button class="chip${done.has(x.id)?' done':''}" data-pt="${x.id}" aria-pressed="${x.id===S.pt}">${x.id}</button>`).join('')}</div></div>`:''}
-  </section>
+  ${(els.length>1||(S.el!=='pile'&&e.pts.length>1))?`<section class="card">
+    ${els.length>1?`<div><div class="lab" style="margin-bottom:6px">What are you checking</div>
+    <div class="seg" id="els">${els.map(x=>`<button data-el="${x.k}" aria-pressed="${x.k===S.el}">${x.name}</button>`).join('')}</div></div>`:''}
+    ${S.el!=='pile'&&e.pts.length>1?`<div><div class="lab" style="margin-bottom:6px">Point</div><div class="chips" id="pts">${e.pts.map(x=>`<button class="chip${done.has(x.id)?' done':''}" data-pt="${x.id}" aria-pressed="${x.id===S.pt}">${x.id}</button>`).join('')}</div></div>`:''}
+  </section>`:''}
   ${flagged?`<div class="warnbox">The design level for ${esc(s.label)} is still under query: it does not fit the 1.19% deck grade. Treat level differences here with care until the designer issues the drawing.</div>`:''}
-  ${s.pier&&s.pier.pend&&(S.el==='level'||S.el==='pile'||S.el==='shaft')?`<div class="warnbox">Base level stays as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level instead, so the top of column shown is the old drawn value and will change. The new pier top level has not been received yet. Pile head and toe levels are not affected.</div>`:''}
+  ${s.pier&&s.pier.pend&&(S.el==='level'||S.el==='pile'||S.el==='shaft')?`<div class="warnbox">Base level is as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level, so the top of column shown is the old drawn value. Pile head and toe levels are not affected.</div>`:''}
   <section class="card">
-    <div class="row"><b>${esc(s.label)} · ${esc(e.name)} ${esc(p.id)}</b><span class="tiny">${esc(p.extra||'')}</span></div>
+    <div><b>${esc(s.label)} · ${esc(e.name)} ${esc(S.el==='pile'?bookPileName(s,pilesOf(s).find(x=>x.id===p.id)):p.id)}</b><div class="tiny">${esc(p.extra||'')}</div></div>
     <dl class="kv"><dt>Design Easting</dt><dd>${f4(p.E)}</dd><dt>Design Northing</dt><dd>${f4(p.N)}</dd><dt>${S.el==='pile'?'Design pile head level':'Design level'}</dt><dd>${f3(p.Z)}</dd>${S.el==='pile'?pileLevelRows(s,p):''}</dl>
     ${p.Z!=null&&e.zNote?`<div class="hint">${esc(e.zNote)}</div>`:''}
   </section>
@@ -220,8 +291,7 @@ function renderCheck(){
     <div><label for="note">Note</label><input id="note" autocomplete="off" placeholder="Optional, e.g. instrument, weather, remark"></div>
     <button class="btn" id="save" disabled>Save reading</button>
   </section>`;
-  $('#sel').onchange=ev=>{S.sKey=ev.target.value;S.el='pile';S.pt=null;render()};
-  $('#els').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.el=b.dataset.el;S.pt=null;render()};
+  const elsb=$('#els'); if(elsb) elsb.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.el=b.dataset.el;S.pt=null;render()};
   const pts=$('#pts'); if(pts) pts.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.pt=b.dataset.pt;render()};
   ['mE','mN','mZ'].forEach(id=>$('#'+id).oninput=updateResult);
   $('#save').onclick=saveReading; updateResult(); if(S.el==='pile') wireCasing(s,p);
@@ -250,7 +320,7 @@ function saveReading(){
   const rec={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:new Date().toISOString(),sKey:S.sKey,struct:s.label,el:S.el,elName:e.name,pt:p.id,
     mE:m.E,mN:m.N,mZ:m.Z,dE:p.E,dN:p.N,dZ:p.Z,eE:r.dE,eN:r.dN,rad:r.rad,across:r.u,along:r.v,eZ:r.dZ,status:r.status,note:$('#note').value.trim()};
   addReading(rec);
-  const pts=e.pts, i=pts.findIndex(x=>x.id===p.id); if(i>=0&&i<pts.length-1) S.pt=pts[i+1].id;
+  const pts=S.el==='pile'?pilesSorted(s).map(x=>({id:x.q.id})):e.pts, i=pts.findIndex(x=>x.id===p.id); if(i>=0&&i<pts.length-1) S.pt=pts[i+1].id;
   render(); const sv=$('#save'); if(sv){sv.textContent='Saved. Next point ready';setTimeout(()=>{if($('#save'))$('#save').textContent='Save reading'},1800)}
 }
 
@@ -311,9 +381,8 @@ function renderDesign(){
     body+=`<section class="card"><b>${esc(e.name)} coordinates</b><div class="hint">Tap a row to check that point.</div><div class="tablewrap"><table><thead><tr><th>Point</th><th>Easting</th><th>Northing</th></tr></thead><tbody>
     ${e.pts.map(q=>`<tr class="tap" data-go="${e.k}|${q.id}"><td>${q.id}</td><td>${f4(q.E)}</td><td>${f4(q.N)}</td></tr>`).join('')}</tbody></table></div></section>`;
   });
-  $('#view').innerHTML=`<section class="card"><div><label for="dsel">Pier or abutment</label><select id="dsel">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div></section>`+body+
+  $('#view').innerHTML=body+
    `<div class="hint">Pile points here are numbered by position. The Pile record tab shows the book name (e.g. PR7-PL6) for each one.</div>`;
-  $('#dsel').onchange=ev=>{S.sKey=ev.target.value;S.el='pile';S.pt=null;render()};
   $('#view').onclick=ev=>{const r=ev.target.closest('[data-go]');if(!r)return;const [k,id]=r.dataset.go.split('|');S.el=k;S.pt=id;S.tab='check';render()};
 }
 
@@ -441,7 +510,7 @@ function renderHand(){
   const q=piles.find(x=>x.id===S.recPile), r=pileRecord(s,q);
   const names=piles.map(x=>({id:x.id,n:bookPileName(s,x)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}));
   const warn=[]; if(s.pier&&s.pier.gradeFlag==='CHECK') warn.push('Level under query for this pier (see Design tab): confirm the base level, and so the pile head level, with the engineer before excavating.');
-  if(s.pier&&s.pier.pend) warn.push('Base level stays as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level instead, so the top of column shown is the old drawn value and will change. The new pier top level has not been received yet. Pile head and toe levels are not affected.');;
+  if(s.pier&&s.pier.pend) warn.push('Base level is as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level, so the top of column shown is the old drawn value. Pile head and toe levels are not affected.');;
   if(r.head==null) warn.push('Pile head level for abutments is not given in the book. Take it from the pile cap bottom level on the abutment sheets.');
   const key='rec_'+s.key+'_'+q.id; if(!REC_VAL[key]) REC_VAL[key]={}; const v=REC_VAL[key];
   if(!v.stages||!v.stages.length) v.stages=Array.from({length:8},()=>({d:'',a:'',s:'',m:'',g:'',q:''}));
@@ -452,11 +521,10 @@ function renderHand(){
     <div class="row"><input type="date" data-st="d" data-i="${i}" value="${esc(x.d)}" aria-label="Date ${i+1}" style="flex:1"><select data-st="a" data-i="${i}" aria-label="Activity ${i+1}" style="flex:1">${HD_ACT.map(o=>`<option value="${o}"${x.a===o?' selected':''}>${o||'Activity'}</option>`).join('')}</select></div>
     <div class="row"><input data-st="s" data-i="${i}" inputmode="decimal" placeholder="Stage depth (m), e.g. 1.0" value="${esc(x.s)}" aria-label="Stage depth ${i+1}" style="flex:1"><input data-st="m" data-i="${i}" inputmode="decimal" placeholder="Measured pile dia. (mm)" value="${esc(x.m)}" aria-label="Measured diameter ${i+1}" style="flex:1"></div>
     <input data-st="g" data-i="${i}" placeholder="Ground strata and groundwater conditions" value="${esc(x.g)}" aria-label="Strata ${i+1}"><input data-st="q" data-i="${i}" placeholder="Quality record (verticality / diameter / lining)" value="${esc(x.q)}" aria-label="Quality ${i+1}"></div>`).join('');
-  $('#view').innerHTML=`${recSwitch()}<section class="card"><div class="row"><div style="flex:1"><label for="rs">Pier or abutment</label><select id="rs">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div>
-  <div style="flex:1"><label for="rp">Pile</label><select id="rp">${names.map(x=>`<option value="${x.id}"${x.id===S.recPile?' selected':''}>${x.n}</option>`).join('')}</select></div></div></section>
+  $('#view').innerHTML=`${recSwitch()}
   ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
   <section class="card"><b>HAND-DUG PILE CONSTRUCTION RECORD</b><div class="hint">One sheet per pile. Values from the book are filled in; change any of them if the engineer tells you to.</div>
-  <dl class="kv"><dt>Project</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Contractor</dt><dd>${esc(FORM_CONTRACTOR)}</dd><dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Pile Head Level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd></dl>
+  <div class="tiny">${esc(FORM_PROJECT)} · ${esc(FORM_CONTRACTOR)}</div><dl class="kv"><dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Pile Head Level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd></dl>
   ${fld('recno','Record No.','','')}${fld('rdate','Record date','date','')}</section>
   <section class="card"><b>1. Pile details</b>
   ${fld('conc','Concrete Class','', '', 'C25/30')}${nf('toe','Pile Toe Level (m)',F.toe,'')}${nf('alen','Actual Pile Length (m)',F.alen,'')}${fld('lining','Lining Type','','',F.lining)}${nf('cage','Rebar Cage Length (m)',F.cage,'')}${fld('bars','Main Reinforcement (Bar Size/No.)','',F.bars,F.bars)}
@@ -482,8 +550,6 @@ function renderHand(){
   <button class="btn" id="hexp" style="margin-top:8px">Export pile records (CSV)</button><button class="btn ghost" id="hexs" style="margin-top:8px">Export staged excavation (CSV)</button><button class="btn ghost" id="pexp" style="margin-top:8px">Export pile progress (CSV, for the geodatabase)</button>
   ${(S.hcsv||S.pcsv)?`<textarea class="csv" readonly>${esc(S.hcsv||S.pcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
   wireSwitch();
-  $('#rs').onchange=e=>{S.sKey=e.target.value;S.recPile=null;render()};
-  $('#rp').onchange=e=>{S.recPile=e.target.value;render()};
   const stamp=()=>{v.upd=new Date().toISOString().slice(0,10);saveLS('nithi_rec',REC_VAL)};
   const refresh=()=>{const H2=hdVals(s,q,r,v);H2.rows.forEach((x,i)=>{const el=document.querySelector('[data-cum="'+i+'"]');if(el)el.textContent=x.cum===''?'—':x.cum.toFixed(2)+' m'});$('#hdcalc').innerHTML=hdCalcHtml(s,q,r,v)};
   const onchg=e=>{const t=e.target;
@@ -559,11 +625,10 @@ function renderBored(){
   const fld=(id,lab,def,type,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-b="${id}" ${type?'type="'+type+'"':'inputmode="text"'} value="${esc(val(id,def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
   const nf=(id,lab,def,ph)=>`<div><label for="${id}">${lab}</label><input id="${id}" data-b="${id}" inputmode="decimal" value="${esc(val(id,def))}" placeholder="${ph||''}" autocomplete="off"></div>`;
   const warn=[]; if(s.pier&&s.pier.gradeFlag==='CHECK') warn.push('Level under query for this pier (see Design tab): confirm the base level, and so the cut-off and toe levels, with the engineer before finishing the pile.');
-  if(s.pier&&s.pier.pend) warn.push('Base level stays as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level instead, so the top of column shown is the old drawn value and will change. The new pier top level has not been received yet. Pile head and toe levels are not affected.');;
+  if(s.pier&&s.pier.pend) warn.push('Base level is as originally designed (confirmed 24 Nov 2026). The designer is changing the pier top level, so the top of column shown is the old drawn value. Pile head and toe levels are not affected.');;
   if(r.head==null) warn.push('Cut-off level for abutments is not given in the book. Take it from the pile cap bottom level on the abutment sheets.');
   $('#view').innerHTML=`${recSwitch()}
-  <section class="card"><div class="row"><div style="flex:1"><label for="rs">Pier or abutment</label><select id="rs">${structures.map(x=>`<option value="${x.key}"${x.key===S.sKey?' selected':''}>${esc(x.label)}</option>`).join('')}</select></div>
-  <div style="flex:1"><label for="rp">Pile</label><select id="rp">${names.map(x=>`<option value="${x.id}"${x.id===S.recPile?' selected':''}>${x.n}</option>`).join('')}</select></div></div></section>
+  
   ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
   <section class="card"><b>BORED PILE RECORD: header</b><div class="hint">Filled from the book of drawings.</div>
   <dl class="kv"><dt>Project Title</dt><dd>${esc(FORM_PROJECT)}</dd><dt>Proj. Ref. No.</dt><dd>6000104</dd><dt>Pile Ref No.</dt><dd>${r.no}</dd><dt>Pile Size</dt><dd>${q.dia} mm</dd>
@@ -594,8 +659,6 @@ function renderBored(){
   <button class="btn" id="bpexp" style="margin-top:8px">Export all bored pile records (CSV)</button>
   ${S.bcsv?`<textarea class="csv" readonly>${esc(S.bcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
   wireSwitch();
-  $('#rs').onchange=e=>{S.sKey=e.target.value;S.recPile=null;render()};
-  $('#rp').onchange=e=>{S.recPile=e.target.value;render()};
   const stamp=()=>{v.upd=new Date().toISOString().slice(0,10);saveLS('nithi_bp',BP_VAL)};
   const onchg=e=>{const t=e.target;
     if(t.dataset.b){v[t.dataset.b]=t.value;stamp();$('#bpcalc').innerHTML=bpCalcHtml(r,q,v)}
@@ -620,13 +683,113 @@ function renderSettings(){
   $('#clr').onclick=()=>{if(S.confirmClear){clearReadings();S.confirmClear=false}else S.confirmClear=true;render()};
 }
 
-const NAV_KEYS=['tab','sKey','el','pt','recPile','recForm','logFilter'];
+/* ---------- NAVIGATION: where-am-I bar, picker, sections ---------- */
+const pilesOf=s=>s.pier?s.pier.piles:s.abut.piles;
+const pileLabel=(s,q)=>bookPileName(s,q).split('-').pop();
+function pilesSorted(s){return pilesOf(s).map(q=>({q,n:bookPileName(s,q)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}))}
+function pileState(s,id){
+  const v=REC_VAL['rec_'+s.key+'_'+id], st=v&&v.status;
+  return st==='Concreted'?'done':st==='Reached toe'?'toe':st==='Digging'?'dig':(v&&hdHasData(v))?'dig':'';
+}
+const pileRead=(s,id)=>readings.some(r=>r.sKey===s.key&&r.el==='pile'&&r.pt===id);
+const tagOf=s=>s.pier?String(s.pier.n):(s.abut.name==='Abutment A'?'A':'B');
+const topChanging=s=>!!(s.pier&&(s.pier.pend||s.pier.gradeFlag==='CHECK'));
+function syncSel(){
+  const s=curStruct(), ids=pilesOf(s).map(q=>q.id);
+  if(S.tab==='check'&&S.el==='pile'&&ids.includes(S.pt)) S.recPile=S.pt;
+  if(!S.recPile||!ids.includes(S.recPile)) S.recPile=pilesSorted(s)[0].q.id;
+}
+function setStruct(key){S.sKey=key;S.el='pile';S.pt=pilesSorted(structures.find(x=>x.key===key))[0].q.id;S.recPile=null;S.csv=null;S.hcsv=null;S.expanded=null;render();window.scrollTo(0,0)}
+function setPile(id){S.recPile=id;S.el='pile';S.pt=id;render()}
+function stepStruct(d){const i=structures.findIndex(x=>x.key===S.sKey)+d; if(i>=0&&i<structures.length) setStruct(structures[i].key)}
+const CARET='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+function renderLoc(){
+  const el=$('#loc'); if(!['check','record','design'].includes(S.tab)){el.hidden=true;return} el.hidden=false;
+  const s=curStruct(), i=structures.indexOf(s), list=pilesSorted(s);
+  const sub=(s.pier?'Base '+s.pier.base+' · ':'')+list.length+' piles';
+  const showPiles=S.tab!=='design', cur=(S.tab!=='check'||S.el==='pile')?S.recPile:null;
+  el.innerHTML=`<div class="locrow">
+    <button class="step" id="prevS" aria-label="Previous pier" ${i===0?'disabled':''}>‹</button>
+    <button class="where" id="where" aria-haspopup="dialog" aria-label="Change pier or abutment. Now ${esc(s.label)}"><span class="tag">${tagOf(s)}</span><span class="wt"><b>${esc(s.label)}${topChanging(s)?'<span class="tri" title="Pier top level changing"></span><span class="sr">Pier top level changing</span>':''}</b><i>${esc(sub)}</i></span>${CARET}</button>
+    <button class="step" id="nextS" aria-label="Next pier" ${i===structures.length-1?'disabled':''}>›</button></div>
+  ${showPiles?`<div class="piles" id="piles" role="group" aria-label="Piles">${list.map(x=>`<button class="pc" data-pile="${x.q.id}" data-st="${pileState(s,x.q.id)}" data-rd="${pileRead(s,x.q.id)?1:0}" aria-pressed="${x.q.id===cur}" aria-label="${x.n}">${x.n.split('-').pop()}</button>`).join('')}</div>`:''}`;
+  const on=el.querySelector('.pc[aria-pressed="true"]'); if(on&&on.scrollIntoView) try{on.scrollIntoView({inline:'center',block:'nearest'})}catch(e){}
+}
+$('#loc').onclick=ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  if(b.id==='prevS') stepStruct(-1); else if(b.id==='nextS') stepStruct(1); else if(b.id==='where') openSheet();
+  else if(b.dataset.pile){setPile(b.dataset.pile); if(S.tab==='record') window.scrollTo(0,0)}
+};
+function structProgress(s){const l=pilesOf(s), n=l.filter(q=>pileState(s,q.id)==='done').length; return {n,t:l.length}}
+let sheetFrom=null;
+function openSheet(){
+  const sh=$('#sheet'), A=structures.find(x=>x.abut&&x.abut.name==='Abutment A'), B=structures.find(x=>x.abut&&x.abut.name==='Abutment B');
+  const ab=x=>{const p=structProgress(x);return `<button class="sab" data-s="${x.key}" aria-current="${x.key===S.sKey}">${esc(x.label)}<span>${p.n} of ${p.t} piles concreted</span></button>`};
+  sh.innerHTML=`<div class="shbk" data-close></div><div class="shp" role="dialog" aria-modal="true" aria-label="Choose pier or abutment">
+    <div class="shh"><b>Go to</b><button class="x" data-close aria-label="Close">×</button></div>
+    <div class="shg">${ab(A)}${structures.filter(x=>x.pier).map(x=>{const p=structProgress(x);return `<button class="sc" data-s="${x.key}" aria-current="${x.key===S.sKey}" aria-label="${esc(x.label)}, ${p.n} of ${p.t} piles concreted${topChanging(x)?', pier top changing':''}">${x.pier.n}<span class="pb"><i style="width:${p.t?Math.round(100*p.n/p.t):0}%"></i></span>${topChanging(x)?'<span class="fl"></span>':''}</button>`}).join('')}${ab(B)}</div>
+    <div class="shk"><span><span class="tri"></span>Pier top level changing</span><span>Bar: piles concreted</span></div></div>`;
+  sh.hidden=false; sheetFrom=document.activeElement;
+  const cur=sh.querySelector('[aria-current="true"]'); if(cur) cur.focus(); if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'center'});
+}
+function closeSheet(){const sh=$('#sheet'); if(sh.hidden) return; sh.hidden=true; sh.innerHTML=''; if(sheetFrom&&sheetFrom.focus) try{sheetFrom.focus()}catch(e){}}
+$('#sheet').onclick=ev=>{
+  if(ev.target.closest('[data-close]')){closeSheet();return}
+  const b=ev.target.closest('[data-s]'); if(b){closeSheet(); setStruct(b.dataset.s)}
+};
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape') closeSheet()});
+/* collapsible sections on the record forms */
+function accKey(t){return t.replace(/\s+/g,' ').trim()}
+function accCount(body){
+  let tot=0,fill=0;
+  const rows=body.querySelectorAll('[data-st="s"],[data-lg="d"]');
+  if(rows.length){rows.forEach(x=>{tot++;if(x.value.trim())fill++});return {tot,fill}}
+  body.querySelectorAll('input:not([type=hidden]),select,textarea').forEach(x=>{tot++;if(String(x.value).trim())fill++});
+  return {tot,fill};
+}
+function accUpdate(d){
+  const c=d.querySelector('.cnt'), body=d.querySelector('.accbody'); if(!c||!body) return;
+  const {tot,fill}=accCount(body); if(!tot){c.textContent='';return}
+  c.textContent=fill+' of '+tot; c.classList.toggle('full',fill===tot);
+}
+function accordionize(){
+  const secs=[...document.querySelectorAll('#view > section.card')].filter(x=>x.firstElementChild&&x.firstElementChild.tagName==='B');
+  secs.forEach((sec,i)=>{
+    if(i===0) return;
+    const b=sec.firstElementChild, title=accKey(b.textContent), d=document.createElement('details'), body=document.createElement('div'), sum=document.createElement('summary');
+    d.className='card acc'; body.className='accbody';
+    while(b.nextSibling) body.appendChild(b.nextSibling);
+    sum.innerHTML='<span class="at"></span><span class="cnt"></span>'; sum.firstChild.textContent=title;
+    d.append(sum,body); d.dataset.k=title;
+    const pref=S.open&&S.open[title]; d.open=pref!=null?!!pref:/^(2\.|Boring details)/.test(title);
+    d.addEventListener('toggle',()=>{S.open=S.open||{};S.open[title]=d.open;saveLS('nithi_nav',Object.fromEntries(NAV_KEYS.map(k=>[k,S[k]])));if(d.open) accUpdate(d)});
+    sec.replaceWith(d); accUpdate(d);
+  });
+  const first=document.querySelector('#view > details.acc');
+  if(first){
+    const bar=document.createElement('div'); bar.className='row';
+    const all=[...document.querySelectorAll('#view > details.acc')];
+    bar.innerHTML='<span class="tiny">Tap a section to open it</span><button class="btn ghost sm" id="accall"></button>';
+    const btn=bar.querySelector('button'), setTxt=()=>{btn.textContent=all.every(x=>x.open)?'Collapse all':'Expand all'};
+    setTxt(); btn.onclick=()=>{const o=!all.every(x=>x.open); all.forEach(x=>{x.open=o}); setTxt()};
+    all.forEach(x=>x.addEventListener('toggle',setTxt));
+    first.before(bar);
+  }
+}
+document.addEventListener('input',()=>{if(S.tab!=='record') return; document.querySelectorAll('#view > details.acc[open]').forEach(accUpdate)});
+document.addEventListener('change',()=>{if(S.tab!=='record') return; document.querySelectorAll('#view > details.acc[open]').forEach(accUpdate)});
+
+const NAV_KEYS=['tab','sKey','el','pt','recPile','recForm','logFilter','open'];
 try{const nv=loadLS('nithi_nav',null); if(nv&&typeof nv==='object'&&structures.some(x=>x.key===nv.sKey)&&['check','log','design','record','settings'].includes(nv.tab)) NAV_KEYS.forEach(k=>{if(nv[k]!=null)S[k]=nv[k]})}catch(e){}
 function render(){
+  syncSel();
   saveLS('nithi_nav',Object.fromEntries(NAV_KEYS.map(k=>[k,S[k]])));
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===S.tab?'page':'false'));
   $('#view').onclick=null;
+  renderLoc();
   ({check:renderCheck,log:renderLog,design:renderDesign,record:renderRecord,settings:renderSettings})[S.tab]();
+  if(S.tab==='record') accordionize();
+  const ln=$('#logn'); if(ln) ln.textContent=readings.length?String(readings.length):'';
 }
 $('#tabs').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;S.tab=b.dataset.tab;S.confirmClear=false;S.expanded=null;render();window.scrollTo(0,0)};
 render(); initStore();

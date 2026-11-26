@@ -216,7 +216,7 @@ function compare(d,m,tolMm){
 /* ---------- storage: Claude db when available, else this phone ---------- */
 let readings=[], store={mode:'local',col:null};
 function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
-function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v1.16'; }
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v1.17'; }
 let offlineReady=false;
 async function initStore(){
   readings=loadLS('nithi_readings',[]); sortR(); setBadge();
@@ -246,23 +246,27 @@ function pileLevelRows(s,pt){
   const r=pileRecord(s,q);
   return `<dt>Book name</dt><dd>${r.no}</dd><dt>Design pile length</dt><dd>${r.len!=null?r.len.toFixed(2)+' m':'—'}</dd><dt>Design pile toe level</dt><dd>${r.toe!=null?f3(r.toe):'—'}</dd>`;
 }
-function casingCalc(s,pt){
-  const q=(s.pier?s.pier.piles:s.abut.piles).find(x=>x.id===pt.id); if(!q) return null;
-  const r=pileRecord(s,q), v=(REC_VAL['rec_'+s.key+'_'+q.id]||{}).casing, c=parseNum(v==null?'':v);
-  return {r,key:'rec_'+s.key+'_'+q.id,raw:v||'',c};
+function pileCtx(s,pt){const q=pilesOf(s).find(x=>x.id===pt.id); if(!q) return null; return {q,r:pileRecord(s,q),m:getMethod(s,q.id)}}
+function topInfo(s,q,m){
+  return m==='rig'?{key:'bp_'+s.key+'_'+q.id,store:BP_VAL,ls:'nithi_bp',field:'ctop',lab:'Casing top',name:'Steel casing top level (m)',hint:'Measure the steel casing top level once the casing is set. The depths are from the casing top down to the pile head and the pile toe.'}
+              :{key:'rec_'+s.key+'_'+q.id,store:REC_VAL,ls:'nithi_rec',field:'casing',lab:'Lining top',name:'Concrete lining top level (m)',hint:'Measure the concrete lining top level once the lining is cast. The depths are from the lining top down to the pile head and the pile toe.'};
 }
 function casingHtml(s,pt){
-  const k=casingCalc(s,pt); if(!k) return '';
-  const {r,c}=k, ok=c!=null&&!isNaN(c);
-  return `<div class="lab">Concrete lining</div><div><label for="cas">Concrete lining top level (m)</label><input class="num" id="cas" inputmode="decimal" autocomplete="off" placeholder="12…" value="${esc(k.raw)}"></div><dl class="kv" id="casout">${casingOut(r,c,ok)}</dl>`;
+  const c=pileCtx(s,pt); if(!c) return '';
+  const chooser=`<div class="lab">Built by</div><div class="seg" id="mth" style="grid-template-columns:1fr 1fr"><button data-m="hand" aria-pressed="${c.m==='hand'}">Hand-dug</button><button data-m="rig" aria-pressed="${c.m==='rig'}">Drilling rig</button></div>`;
+  if(!c.m) return chooser+`<div class="hint">Choose how this pile is being built. A hand-dug pile has a concrete lining top. A pile built with a drilling rig has a steel casing top.</div>`;
+  const t=topInfo(s,c.q,c.m), raw=(t.store[t.key]||{})[t.field]||'', n=parseNum(raw), ok=n!=null&&!isNaN(n);
+  return chooser+`<div><label for="cas">${t.name}</label><input class="num" id="cas" inputmode="decimal" autocomplete="off" placeholder="12…" value="${esc(raw)}"></div><dl class="kv" id="casout">${casingOut(c.r,n,ok,t.lab)}</dl><div class="hint">${t.hint}</div>`;
 }
-function casingOut(r,c,ok){
-  return `<dt>Lining top to pile head</dt><dd>${ok&&r.head!=null?(c-r.head).toFixed(3)+' m':'—'}</dd><dt>Lining top to pile toe</dt><dd>${ok&&r.toe!=null?(c-r.toe).toFixed(3)+' m':'—'}</dd>`;
+function casingOut(r,c,ok,lab){
+  lab=lab||'Lining top';
+  return `<dt>${lab} to pile head</dt><dd>${ok&&r.head!=null?(c-r.head).toFixed(3)+' m':'—'}</dd><dt>${lab} to pile toe</dt><dd>${ok&&r.toe!=null?(c-r.toe).toFixed(3)+' m':'—'}</dd>`;
 }
 function wireCasing(s,pt){
-  const el=$('#cas'); if(!el) return;
-  el.oninput=()=>{const k=casingCalc(s,pt), key=k.key; REC_VAL[key]=Object.assign(REC_VAL[key]||{},{casing:el.value}); saveLS('nithi_rec',REC_VAL);
-    const c=parseNum(el.value); $('#casout').innerHTML=casingOut(k.r,c,c!=null&&!isNaN(c));};
+  const c=pileCtx(s,pt); if(!c) return;
+  const mb=$('#mth'); if(mb) mb.onclick=e=>{const b=e.target.closest('[data-m]'); if(!b) return; setMethod(s,c.q.id,b.dataset.m); render()};
+  const el=$('#cas'); if(!el) return; const t=topInfo(s,c.q,c.m);
+  el.oninput=()=>{t.store[t.key]=Object.assign(t.store[t.key]||{},{[t.field]:el.value}); saveLS(t.ls,t.store); const n=parseNum(el.value); $('#casout').innerHTML=casingOut(c.r,n,n!=null&&!isNaN(n),t.lab)};
 }
 /* ---------- CHECK ---------- */
 function renderCheck(){
@@ -281,7 +285,7 @@ function renderCheck(){
     <dl class="kv"><dt>Design Easting</dt><dd>${f4(p.E)}</dd><dt>Design Northing</dt><dd>${f4(p.N)}</dd><dt>${S.el==='pile'?'Design pile head level':'Design level'}</dt><dd>${f3(p.Z)}</dd>${S.el==='pile'?pileLevelRows(s,p):''}</dl>
     ${p.Z!=null&&e.zNote?`<div class="hint">${esc(e.zNote)}</div>`:''}
   </section>
-  ${S.el==='pile'?`<section class="card">${casingHtml(s,p)}<div class="hint">Measure the concrete lining top level once the lining is cast. The depths are what remains to dig from the casing top down to the pile head and the pile toe.</div></section>`:''}
+  ${S.el==='pile'?`<section class="card">${casingHtml(s,p)}</section>`:''}
   <section class="card">
     <div class="lab">Ground reading</div>
     <div class="grid3">
@@ -429,11 +433,11 @@ function recText(r,extra){
 }
 function progressCsv(){
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
-  const rows=[['pile_name','method','status','depth_to_date_m','lining_top_level_m','date_updated','remarks']];
+  const rows=[['pile_name','method','status','depth_to_date_m','lining_top_level_m','casing_top_level_m','date_updated','remarks']];
   structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
-    if(getMethod(s,p.id)==='rig'){const b=BP_VAL['bp_'+s.key+'_'+p.id]; if(!bpHasData(b)) return; const c=bpCalc(pileRecord(s,p),p,b); rows.push([bookPileName(s,p),'Drilling rig',b.casting?'Concreted':'Boring',c.hole!=null?c.hole.toFixed(3):'','',b.upd||'',b.comments||'']); return}
+    if(getMethod(s,p.id)==='rig'){const b=BP_VAL['bp_'+s.key+'_'+p.id]; if(!bpHasData(b)) return; const c=bpCalc(pileRecord(s,p),p,b); rows.push([bookPileName(s,p),'Drilling rig',b.casting?'Concreted':'Boring',c.hole!=null?c.hole.toFixed(3):'','',b.ctop||'',b.upd||'',b.comments||'']); return}
     const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!v) return; const dd=hdVals(s,p,pileRecord(s,p),v).f.depth; if(!(v.status&&v.status!=='Not started'||dd||v.casing||v.qual)) return;
-    rows.push([bookPileName(s,p),'Hand-dug',v.status||'Not started',(hdVals(s,p,pileRecord(s,p),v).f.depth)||'',v.casing||'',v.upd||'',v.qual||'']);
+    rows.push([bookPileName(s,p),'Hand-dug',v.status||'Not started',(hdVals(s,p,pileRecord(s,p),v).f.depth)||'',v.casing||'','',v.upd||'',v.qual||'']);
   });});
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
@@ -646,6 +650,7 @@ function bpCalcHtml(r,q,v){
   const c=bpCalc(r,q,v), m=x=>x==null?'—':x.toFixed(3)+' m';
   return `<dt>Penetration (ground level − toe level)</dt><dd>${m(c.pen)}</dd><dt>Hole depth (cut-off level − toe level)</dt><dd>${m(c.hole)}</dd>
   <dt>Design volume (area × design length)</dt><dd>${c.dv!=null?c.dv.toFixed(2)+' m³':'—'}</dd><dt>Measured / design volume</dt><dd>${c.ratio!=null?c.ratio.toFixed(2)+(c.ratio<1?' (less than design: check)':''):'—'}</dd>
+  ${bnum(v.ctop)!=null?`<dt>Casing top to cut-off level</dt><dd>${c.cut!=null?(bnum(v.ctop)-c.cut).toFixed(3)+' m':'—'}</dd><dt>Casing top to toe level</dt><dd>${(c.toe!=null?c.toe:r.toe)!=null?(bnum(v.ctop)-(c.toe!=null?c.toe:r.toe)).toFixed(3)+' m':'—'}</dd>`:''}
   ${(c.toe!=null&&r.toe!=null)?`<dt>Toe vs design toe</dt><dd>${(c.toe-r.toe>=0?'+':'')+(c.toe-r.toe).toFixed(3)} m</dd>`:''}`;
 }
 function bpText(s,q,r,v){
@@ -653,7 +658,7 @@ function bpText(s,q,r,v){
   const lg=(v.log||[]).filter(x=>x.d||x.t).map(x=>'  '+(x.d||'?')+' m: '+(x.t||'')).join('\n')||'  -';
   return ['BORED PILE RECORD','Project: '+FORM_PROJECT,'Proj. Ref. No.: 6000104','Pile Ref No.: '+r.no,'Pile Size: '+q.dia+' mm','Time & Date of Casting: '+f('casting'),
   'Ground Level: '+f('ground'),'Cut-Off Level: '+(f('cutoff')!=='-'?f('cutoff'):n(c.cut)),'Toe Level: '+f('toe'),'Penetration: '+n(c.pen),'Hole depth: '+n(c.hole),
-  'Boring started: '+f('bstart'),'Boring ended: '+f('bend'),'Steel casing size (mm): '+f('csize')+'  length (m): '+f('clen'),
+  'Boring started: '+f('bstart'),'Boring ended: '+f('bend'),'Steel casing size (mm): '+f('csize')+'  length (m): '+f('clen')+'  top level (m): '+f('ctop'),
   'Reinforcement No./bar size: '+(f('bars')!=='-'?f('bars'):bpBars(q.dia,s.key).bars)+'  length (m): '+f('cage')+'  links: '+(f('links')!=='-'?f('links'):bpBars(q.dia,s.key).links),
   'Concreting method: '+f('meth'),'Concrete grade: '+(f('grade')!=='-'?f('grade'):'C25/30'),'Vol. of concrete cast (m3): '+f('vol'),'Design volume (m3): '+(c.dv!=null?c.dv.toFixed(2):'-'),
   'No. of cubes: '+f('cubes'),'Test cube ref: '+f('cuberef'),'Inspection CWY site rep: '+f('cwy'),'Site supervisor: '+f('sup'),'Bore log (depth, soil):',lg,'Comments: '+f('comments'),
@@ -661,13 +666,13 @@ function bpText(s,q,r,v){
 }
 function bpCsv(){
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
-  const H=['pile_ref','pile_size_mm','casting','ground_level','cutoff_level','toe_level','penetration_m','hole_depth_m','boring_started','boring_ended','casing_size_mm','casing_length_m','bars','cage_length_m','links','method','grade','vol_cast_m3','design_vol_m3','cubes','cube_ref','cwy_site_rep','site_supervisor','bore_log','comments','prepared_by','prepared_date','hhea','hhea_date','kenha','kenha_date'];
+  const H=['pile_ref','pile_size_mm','casting','ground_level','cutoff_level','toe_level','penetration_m','hole_depth_m','boring_started','boring_ended','casing_size_mm','casing_length_m','casing_top_level_m','bars','cage_length_m','links','method','grade','vol_cast_m3','design_vol_m3','cubes','cube_ref','cwy_site_rep','site_supervisor','bore_log','comments','prepared_by','prepared_date','hhea','hhea_date','kenha','kenha_date'];
   const rows=[H];
   structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
     const v=BP_VAL['bp_'+s.key+'_'+p.id]; if(!v) return;
     const has=Object.keys(v).some(k=>k!=='upd'&&k!=='log'&&v[k]!=='')||(v.log||[]).some(x=>x.d||x.t); if(!has) return;
     const r=pileRecord(s,p), c=bpCalc(r,p,v), g=x=>v[x]!=null?v[x]:'', b=bpBars(p.dia,s.key);
-    rows.push([r.no,p.dia,g('casting'),g('ground'),g('cutoff')!==''?g('cutoff'):(r.head!=null?r.head.toFixed(3):''),g('toe'),c.pen!=null?c.pen.toFixed(3):'',c.hole!=null?c.hole.toFixed(3):'',g('bstart'),g('bend'),g('csize'),g('clen'),g('bars')!==''?g('bars'):b.bars,g('cage'),g('links')!==''?g('links'):b.links,g('meth'),g('grade')!==''?g('grade'):'C25/30',g('vol'),c.dv!=null?c.dv.toFixed(2):'',g('cubes'),g('cuberef'),g('cwy'),g('sup'),(v.log||[]).filter(x=>x.d||x.t).map(x=>(x.d||'')+' m: '+(x.t||'')).join('; '),g('comments'),g('prep'),g('prepD'),g('hhea'),g('hheaD'),g('kenha'),g('kenhaD')]);
+    rows.push([r.no,p.dia,g('casting'),g('ground'),g('cutoff')!==''?g('cutoff'):(r.head!=null?r.head.toFixed(3):''),g('toe'),c.pen!=null?c.pen.toFixed(3):'',c.hole!=null?c.hole.toFixed(3):'',g('bstart'),g('bend'),g('csize'),g('clen'),g('ctop'),g('bars')!==''?g('bars'):b.bars,g('cage'),g('links')!==''?g('links'):b.links,g('meth'),g('grade')!==''?g('grade'):'C25/30',g('vol'),c.dv!=null?c.dv.toFixed(2):'',g('cubes'),g('cuberef'),g('cwy'),g('sup'),(v.log||[]).filter(x=>x.d||x.t).map(x=>(x.d||'')+' m: '+(x.t||'')).join('; '),g('comments'),g('prep'),g('prepD'),g('hhea'),g('hheaD'),g('kenha'),g('kenhaD')]);
   });});
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
@@ -704,7 +709,7 @@ function renderBored(){
   <dl class="kv" id="bpcalc">${bpCalcHtml(r,q,v)}</dl>
   ${fld('bstart','Date &amp; time boring started','','datetime-local')}${fld('bend','Date &amp; time boring ended','','datetime-local')}</section>
   <section class="card"><b>Bore pile detail</b>
-  <div class="lab">Steel casing</div>${nf('csize','Size (mm) diameter','','')}${nf('clen','Length (m)','','')}
+  <div class="lab">Steel casing</div>${nf('csize','Size (mm) diameter','','')}${nf('clen','Length (m)','','')}${nf('ctop','Top level (m)','','')}
   <div class="hint">No steel casing size or length is given in the pile sheets, the notes or the pile design table in the book. Take them from the method statement or the engineer.</div>
   <div class="lab">Reinforcement</div>${fld('bars','No. / bar size (mm)',bb.bars,null,'')}${nf('cage','Length (m)',r.len!=null?r.len.toFixed(1):'','')}${fld('links','Link size / spacing (mm)',bb.links,null,'')}
   <div class="hint">Read from pile reinforcement sheet ${sheetNo(s.key)} of the book: main bars per pile, outer T10 rings and inner T25 stiffener rings, with the pile length from sheet 56. The cage runs into the pile cap by the anchorage shown on the sheet. The sheets still show the base levels from before the designer's revision.</div>

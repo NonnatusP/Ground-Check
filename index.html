@@ -216,7 +216,7 @@ function compare(d,m,tolMm){
 /* ---------- storage: Claude db when available, else this phone ---------- */
 let readings=[], store={mode:'local',col:null};
 function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
-function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v1.15'; }
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v1.16'; }
 let offlineReady=false;
 async function initStore(){
   readings=loadLS('nithi_readings',[]); sortR(); setBadge();
@@ -238,7 +238,7 @@ function clearReadings(){ const ids=readings.map(r=>r.id); readings=[]; if(store
 const S={tab:'check',sKey:'P4',el:'pile',pt:'PL1',logFilter:'all',confirmClear:false,csv:null,expanded:null};
 const curStruct=()=>structures.find(s=>s.key===S.sKey);
 function curElement(){ const els=elementsFor(curStruct()); let e=els.find(x=>x.k===S.el); if(!e){e=els[0];S.el=e.k} let p=e.pts.find(x=>x.id===S.pt); if(!p){p=e.pts[0];S.pt=p.id} return {e,p,els}; }
-const parseNum=v=>{const t=String(v).trim().replace(',','.'); if(t==='')return null; const n=parseFloat(t); return isFinite(n)?n:null};
+const parseNum=v=>{const t=String(v).replace(/\s+/g,'').replace(',','.'); if(t==='')return null; const n=parseFloat(t); return isFinite(n)?n:null};
 const loggedIds=()=>new Set(readings.filter(r=>r.sKey===S.sKey&&r.el===S.el).map(r=>r.pt));
 
 function pileLevelRows(s,pt){

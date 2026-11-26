@@ -9,8 +9,9 @@ Compare a ground reading (Easting, Northing, level) with the design value for a 
 
 **Record**
 Fill in the pile construction record for each pile. For every pile you choose whether it is hand-dug or built with a drilling rig, and the matching form opens.
-- Hand-dug record: pile details, excavation record, staged excavation and concrete lining table, reinforcement cage, concreting record and sign-off. It works out the cumulative depth, the toe level reached, the depth still to dig and the concrete volume ratio.
-- Bored pile record: boring details, steel casing, reinforcement, concreting, bore log and sign-off. It works out penetration, hole depth and the volume ratio.
+- Hand-dug record: pile details, excavation record, staged excavation and concrete lining table, reinforcement cage and concreting record. It works out the cumulative depth, the toe level reached, the depth still to dig and the concrete volume ratio.
+- Bored pile record: boring details, steel casing, reinforcement, concreting, bore log and comments. It works out penetration, hole depth and the volume ratio.
+- On the Check screen a pile also has a top level: the concrete lining top for a hand-dug pile, or the steel casing top for a pile built with a drilling rig. The app shows the depth from that level down to the pile head and the pile toe.
 - Design values (pile head, toe, length, diameter, reinforcement) are filled in from the drawings and can be overwritten.
 
 **Design**
@@ -23,6 +24,8 @@ All saved readings, with a filter by pier or abutment, a count of readings withi
 Tolerances for pile, shaft, centre and level checks.
 
 ## Moving around
+
+Piles are numbered as on the drawings (for example PR3-PL2, AA-PL1, AB-PL4).
 
 A bar at the top of the Check, Record and Design screens shows the current pier or abutment and its piles. Use the arrows to step to the next or previous pier, tap the pier name to pick from a grid of all piers, and tap a pile to switch to it. Each pile chip shows its progress (digging, reached toe, concreted), whether a reading is saved, and whether it is hand-dug (H) or drilling rig (R). The app opens where you left off.
 

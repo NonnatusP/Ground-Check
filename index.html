@@ -113,6 +113,8 @@ header h1{font-size:16px}
 .pc[aria-pressed="true"][data-st="toe"]::after,.pc[aria-pressed="true"][data-st="done"]::after{background:var(--accent-ink)}
 .pc[data-rd="1"]::before{content:"✓";position:absolute;top:2px;right:5px;font-size:11px;color:var(--ok)}
 .pc[aria-pressed="true"][data-rd="1"]::before{color:var(--accent-ink)}
+.pc .mk{position:absolute;top:2px;left:5px;font-style:normal;font-size:10px;line-height:1;color:var(--muted);font-family:var(--sans);font-weight:600}
+.pc[aria-pressed="true"] .mk{color:var(--accent-ink)}
 .pkey{font-size:11.5px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
 .pkey b{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
 /* picker sheet */
@@ -214,7 +216,7 @@ function compare(d,m,tolMm){
 /* ---------- storage: Claude db when available, else this phone ---------- */
 let readings=[], store={mode:'local',col:null};
 function sortR(){readings.sort((a,b)=>b.t.localeCompare(a.t))}
-function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v13'; }
+function setBadge(){ $('#store').textContent = (offlineReady?'Offline ready · ':'')+'saved on this phone · v1.15'; }
 let offlineReady=false;
 async function initStore(){
   readings=loadLS('nithi_readings',[]); sortR(); setBadge();
@@ -420,17 +422,18 @@ function pileRecord(s,q){
 }
 let REC_VAL=loadLS('nithi_rec',{});
 function recText(r,extra){
-  return ['HAND-DUG PILE CONSTRUCTION RECORD','Project: '+FORM_PROJECT,'Contractor: '+FORM_CONTRACTOR,'Pile No. on Layout Plan: '+r.no,
+  return ['HAND-DUG PILE CONSTRUCTION RECORD','Project: '+HD_PROJECT,'Contractor: '+HD_CONTRACTOR,'Pile No. on Layout Plan: '+r.no,
   'Pile Diameter: '+r.dia+' mm','Concrete Class: '+r.conc,'Pile Head Level: '+(r.head!=null?f2(r.head)+' m (calculated)':'-'),
   'Design Pile Length: '+(r.len!=null?r.len+' m':'-'),'Pile Toe Level: '+(r.toe!=null?f2(r.toe)+' m (calculated)':'-'),
   'Main Reinforcement: '+r.main,'Spiral / ring bars: '+r.spiral,'Easting/Northing: '+f4(r.E)+' / '+f4(r.N)].join('\n');
 }
 function progressCsv(){
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
-  const rows=[['pile_name','status','depth_to_date_m','lining_top_level_m','date_updated','remarks']];
+  const rows=[['pile_name','method','status','depth_to_date_m','lining_top_level_m','date_updated','remarks']];
   structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).forEach(p=>{
+    if(getMethod(s,p.id)==='rig'){const b=BP_VAL['bp_'+s.key+'_'+p.id]; if(!bpHasData(b)) return; const c=bpCalc(pileRecord(s,p),p,b); rows.push([bookPileName(s,p),'Drilling rig',b.casting?'Concreted':'Boring',c.hole!=null?c.hole.toFixed(3):'','',b.upd||'',b.comments||'']); return}
     const v=REC_VAL['rec_'+s.key+'_'+p.id]; if(!v) return; const dd=hdVals(s,p,pileRecord(s,p),v).f.depth; if(!(v.status&&v.status!=='Not started'||dd||v.casing||v.qual)) return;
-    rows.push([bookPileName(s,p),v.status||'Not started',(hdVals(s,p,pileRecord(s,p),v).f.depth)||'',v.casing||'',v.upd||'',v.qual||'']);
+    rows.push([bookPileName(s,p),'Hand-dug',v.status||'Not started',(hdVals(s,p,pileRecord(s,p),v).f.depth)||'',v.casing||'',v.upd||'',v.qual||'']);
   });});
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
@@ -454,7 +457,7 @@ function hdVals(s,q,r,v){
   const dv=Math.PI*Math.pow(q.dia/2000,2)*(r.len!=null?r.len:0);
   const x=REINF[s.key];
   const f={recno:g('recno'),rdate:g('rdate'),conc:g('conc','C25/30'),head:r.head!=null?r.head.toFixed(3):'',dia:String(q.dia),toe:g('toe',r.toe!=null?r.toe.toFixed(3):''),
-    dlen:r.len!=null?String(r.len):'',alen:g('alen',last!=null?String(last):''),lining:g('lining','Concrete lining, cast every 1 m'),cage:g('cage',r.len!=null?String(r.len):''),bars:g('bars',x?x[0]+'T25':''),
+    dlen:r.len!=null?String(r.len):'',alen:g('alen'),lining:g('lining','Concrete lining, cast every 1 m'),cage:g('cage',r.len!=null?String(r.len):''),bars:g('bars',x?x[0]+'T25':''),
     start:g('start'),end:g('end'),depth:g('depth',last!=null?String(last):''),meth:g('meth'),open:g('open'),spec:g('spec'),
     cfab:g('cfab'),cinst:g('cinst'),csec:g('csec'),cjoint:g('cjoint'),ccover:g('ccover','75'),cspacer:g('cspacer'),cinsp:g('cinsp'),
     pdate:g('pdate'),pmeth:g('pmeth'),slump:g('slump'),dvol:g('dvol',r.len!=null?dv.toFixed(2):''),avol:g('avol'),cubes:g('cubes'),pstart:g('pstart'),pfinish:g('pfinish'),cprob:g('cprob'),
@@ -478,13 +481,53 @@ function hdEach(fn){structures.forEach(s=>{(s.pier?s.pier.piles:s.abut.piles).fo
 function hdFormCsv(){
   const rows=[HD_HEAD];
   hdEach((s,p,v,r)=>{const {f,calc}=hdVals(s,p,r,v);
-    rows.push([f.recno,f.rdate,FORM_PROJECT,FORM_CONTRACTOR,r.no,f.conc,f.head,f.dia,f.toe,f.dlen,f.alen,f.lining,f.cage,f.bars,f.start,f.end,f.depth,f.meth,f.open,f.spec,f.cfab,f.cinst,f.csec,f.cjoint,f.ccover,f.cspacer,f.cinsp,f.pdate,f.pmeth,f.slump,f.dvol,f.avol,f.cubes,f.pstart,f.pfinish,calc.ratio!=null?calc.ratio.toFixed(2):'',f.cprob,f.contr,f.contrD,f.insp,f.inspD]);});
+    rows.push([f.recno,f.rdate,HD_PROJECT,HD_CONTRACTOR,r.no,f.conc,f.head,f.dia,f.toe,f.dlen,f.alen,f.lining,f.cage,f.bars,f.start,f.end,f.depth,f.meth,f.open,f.spec,f.cfab,f.cinst,f.csec,f.cjoint,f.ccover,f.cspacer,f.cinsp,f.pdate,f.pmeth,f.slump,f.dvol,f.avol,f.cubes,f.pstart,f.pfinish,calc.ratio!=null?calc.ratio.toFixed(2):'',f.cprob,f.contr,f.contrD,f.insp,f.inspD]);});
   return rows.map(r=>r.map(csvQ).join(',')).join('\n');
 }
 function hdStagesCsv(){
   const rows=[HD_STAGE_HEAD];
   hdEach((s,p,v,r)=>{hdVals(s,p,r,v).rows.filter(x=>x.has).forEach(x=>rows.push([r.no,x.n,x.date,x.act,x.stage,x.cum,x.dia,x.strata,x.qual]))});
   return rows.map(r=>r.map(csvQ).join(',')).join('\n');
+}
+const HD_PROJECT='REALIGNMENT OF NITHI BRIDGE ALONG MAKUTANO-EMBU-MERU (A9) ROAD';
+const HD_CONTRACTOR='CHINA WU YI CO. LTD JOINT VENTURE WITH HOWARD HUMPHREYS (EA) LTD';
+function fmtD(iso){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');return m?m[3]+'/'+m[2]+'/'+m[1]:(iso||'')}
+/* One block per pile that follows the paper form, section by section, row by row. */
+function hdLayoutRows(s,p,v,r){
+  const {f,rows,calc}=hdVals(s,p,r,v), B=[];
+  const ratio=calc.ratio!=null?calc.ratio.toFixed(2):'';
+  B.push(['HAND-DUG PILE CONSTRUCTION RECORD','','','Record No.:',f.recno,'(One sheet per pile)']);
+  B.push(['Record Date',fmtD(f.rdate),'','','','']);
+  B.push(['1. PILE DETAILS','','','','','']);
+  B.push(['Project',HD_PROJECT,'Pile No. on Layout Plan',r.no,'Concrete Class',f.conc]);
+  B.push(['Contractor',HD_CONTRACTOR,'Pile Diameter (mm)',f.dia,'Design Pile Length (m)',f.dlen]);
+  B.push(['Pile Head Level (m)',f.head,'Pile Toe Level (m)',f.toe,'Actual Pile Length (m)',f.alen]);
+  B.push(['Lining Type',f.lining,'Rebar Cage Length (m)',f.cage,'Main Reinforcement (Bar Size/No.)',f.bars]);
+  B.push(['2. PILE EXCAVATION RECORD','','','','','']);
+  B.push(['Excavation Start',fmtD(f.start),'Excavation Completion Date',fmtD(f.end),'Actual Shaft Depth (m)',f.depth]);
+  B.push(['Excavation Method',f.meth,'Shaft Opening Level (m)',f.open,'','']);
+  B.push(['Special Excavation Measures (Collapse, Water Ingress, Running Sand, Boulders, Obstructions)',f.spec,'','','','']);
+  B.push(['3. STAGED EXCAVATION AND CONCRETE LINING RECORD','','','','','','','']);
+  B.push(['No.','Date','Activity (Excavation/Lining)','Stage Depth (m)','Cumulative Depth (m)','Measured Pile Dia. (mm)','Ground Strata and Groundwater Conditions','Quality Record (Verticality/Diameter/Lining)']);
+  rows.filter(x=>x.has).forEach(x=>B.push([x.n,fmtD(x.date),x.act,x.stage,x.cum,x.dia,x.strata,x.qual]));
+  B.push(['Note: Cast the concrete lining promptly after each excavation stage (approx. 0.9-1.0 m). Lining concrete class shall meet the design requirements. If groundwater, running sand, soft soil or other abnormal conditions are encountered, stop work immediately and report promptly for remedial action.','','','','','','','']);
+  B.push(['4. REINFORCEMENT CAGE FABRICATION AND INSTALLATION','','','','','']);
+  B.push(['Cage Fabrication Date',fmtD(f.cfab),'Cage Installation Date',fmtD(f.cinst),'Cage Section Details',f.csec]);
+  B.push(['Jointing Method',f.cjoint,'Cover to Main Bars (mm)',f.ccover,'Spacer/Centraliser Details',f.cspacer]);
+  B.push(['Cage Installation Inspection (Verticality, Level, Centring, Joint Quality)',f.cinsp,'','','','']);
+  B.push(['5. CONCRETING RECORD','','','','','']);
+  B.push(['Pour Date',fmtD(f.pdate),'Placing Method',f.pmeth,'Slump (mm)',f.slump]);
+  B.push(['Design Vol. (m³)',f.dvol,'Actual Concrete Volume (m³)',f.avol,'Cube Test Sets (No.)',f.cubes]);
+  B.push(['Pour Start Time',f.pstart,'Pour Finish Time',f.pfinish,'Concrete Volume Ratio',ratio]);
+  B.push(['Concreting Problems and Remedial Action (Pipe Blockage, Segregation, Pile Discontinuity)',f.cprob,'','','','']);
+  B.push(['CONTRACTOR:',f.contr,'DATE:',fmtD(f.contrD),'','']);
+  B.push(['INSPECTOR:',f.insp,'DATE:',fmtD(f.inspD),'','']);
+  return B;
+}
+function hdLayoutCsv(){
+  const out=[]; let first=true;
+  hdEach((s,p,v,r)=>{ if(!first){out.push([]);out.push([])} first=false; hdLayoutRows(s,p,v,r).forEach(x=>out.push(x)) });
+  return out.map(r=>r.map(csvQ).join(',')).join('\n');
 }
 async function saveCsv(name,text,stateKey){
   try{
@@ -496,7 +539,7 @@ async function saveCsv(name,text,stateKey){
 function hdText(s,q,r,v){
   const {f,rows,calc}=hdVals(s,q,r,v), d=x=>x===''||x==null?'-':x;
   const st=rows.filter(x=>x.has).map(x=>'  '+x.n+'. '+d(x.date)+' | '+d(x.act)+' | stage '+d(x.stage)+' | cum '+d(x.cum)+' | dia '+d(x.dia)+' | '+d(x.strata)+' | '+d(x.qual)).join('\n')||'  -';
-  return ['HAND-DUG PILE CONSTRUCTION RECORD','Record No: '+d(f.recno),'Record Date: '+d(f.rdate),'Project: '+FORM_PROJECT,'Contractor: '+FORM_CONTRACTOR,
+  return ['HAND-DUG PILE CONSTRUCTION RECORD','Record No: '+d(f.recno),'Record Date: '+d(f.rdate),'Project: '+HD_PROJECT,'Contractor: '+HD_CONTRACTOR,
   '1. PILE DETAILS','Pile No. on Layout Plan: '+r.no,'Concrete Class: '+d(f.conc),'Pile Head Level (m): '+d(f.head),'Pile Diameter (mm): '+f.dia,'Pile Toe Level (m): '+d(f.toe),'Design Pile Length (m): '+d(f.dlen),'Actual Pile Length (m): '+d(f.alen),'Lining Type: '+d(f.lining),'Rebar Cage Length (m): '+d(f.cage),'Main Reinforcement (Bar Size/No.): '+d(f.bars),
   '2. PILE EXCAVATION RECORD','Excavation Start: '+d(f.start),'Excavation Completion Date: '+d(f.end),'Actual Shaft Depth (m): '+d(f.depth),'Excavation Method: '+d(f.meth),'Shaft Opening Level (m): '+d(f.open),'Special Excavation Measures: '+d(f.spec),
   '3. STAGED EXCAVATION AND CONCRETE LINING RECORD',st,
@@ -524,7 +567,7 @@ function renderHand(){
   $('#view').innerHTML=`${recSwitch()}
   ${warn.map(w=>`<div class="warnbox">${esc(w)}</div>`).join('')}
   <section class="card"><b>HAND-DUG PILE CONSTRUCTION RECORD</b><div class="hint">One sheet per pile. Values from the book are filled in; change any of them if the engineer tells you to.</div>
-  <div class="tiny">${esc(FORM_PROJECT)} · ${esc(FORM_CONTRACTOR)}</div><dl class="kv"><dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Pile Head Level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd></dl>
+  <div class="tiny">${esc(HD_PROJECT)} · ${esc(HD_CONTRACTOR)}</div><dl class="kv"><dt>Pile No. on Layout Plan</dt><dd>${r.no}</dd><dt>Pile Diameter</dt><dd>${r.dia} mm</dd><dt>Pile Head Level</dt><dd>${r.head!=null?r.head.toFixed(3)+' m (calc)':'—'}</dd><dt>Design Pile Length</dt><dd>${r.len!=null?r.len.toFixed(1)+' m':'—'}</dd></dl>
   ${fld('recno','Record No.','','')}${fld('rdate','Record date','date','')}</section>
   <section class="card"><b>1. Pile details</b>
   ${fld('conc','Concrete Class','', '', 'C25/30')}${nf('toe','Pile Toe Level (m)',F.toe,'')}${nf('alen','Actual Pile Length (m)',F.alen,'')}${fld('lining','Lining Type','','',F.lining)}${nf('cage','Rebar Cage Length (m)',F.cage,'')}${fld('bars','Main Reinforcement (Bar Size/No.)','',F.bars,F.bars)}
@@ -546,8 +589,8 @@ function renderHand(){
   ${fld('casing','Concrete lining top level (m)','','')}<dl class="kv" id="rcas">${casingOut(r,parseNum(v.casing||''),!!v.casing&&!isNaN(parseNum(v.casing)))}</dl>${fld('qual','Progress remarks','','')}</section>
   <section class="card"><b>Copy or export</b>
   <button class="btn ghost" id="rcp">Copy this record as text</button><div class="hint" id="rmsg"></div>
-  <div class="hint" style="margin-top:8px">The pile record CSV has one row per pile with the same fields and order as the form. The staged excavation CSV has one row per stage, with the pile number to match.</div>
-  <button class="btn" id="hexp" style="margin-top:8px">Export pile records (CSV)</button><button class="btn ghost" id="hexs" style="margin-top:8px">Export staged excavation (CSV)</button><button class="btn ghost" id="pexp" style="margin-top:8px">Export pile progress (CSV, for the geodatabase)</button>
+  <div class="hint" style="margin-top:8px">Form layout: one block per pile, with sections 1 to 5, the staged table and the sign-off in the same order and wording as the paper form. One row per pile: a flat table for the geodatabase. Staged rows only: the section 3 rows with the pile number.</div>
+  <button class="btn" id="hexl" style="margin-top:8px">Export in form layout (CSV)</button><button class="btn ghost" id="hexp" style="margin-top:8px">Export one row per pile (CSV)</button><button class="btn ghost" id="hexs" style="margin-top:8px">Export staged rows only (CSV)</button><button class="btn ghost" id="pexp" style="margin-top:8px">Export pile progress (CSV, for the geodatabase)</button>
   ${(S.hcsv||S.pcsv)?`<textarea class="csv" readonly>${esc(S.hcsv||S.pcsv)}</textarea><div class="hint">Copy this into a file named .csv</div>`:''}</section>`;
   wireSwitch();
   const stamp=()=>{v.upd=new Date().toISOString().slice(0,10);saveLS('nithi_rec',REC_VAL)};
@@ -557,6 +600,7 @@ function renderHand(){
     else if(t.dataset.st){v.stages[+t.dataset.i][t.dataset.st]=t.value;stamp();refresh()}};
   $('#view').oninput=onchg; $('#view').onchange=onchg;
   const add=$('#hdadd'); if(add) add.onclick=()=>{for(let i=0;i<4&&v.stages.length<34;i++) v.stages.push({d:'',a:'',s:'',m:'',g:'',q:''});stamp();render()};
+  $('#hexl').onclick=()=>{S.hcsv=null;saveCsv('nithi-hand-dug-form-layout',hdLayoutCsv(),'hcsv')};
   $('#hexp').onclick=()=>{S.hcsv=null;saveCsv('nithi-hand-dug-pile-records',hdFormCsv(),'hcsv')};
   $('#hexs').onclick=()=>{S.hcsv=null;saveCsv('nithi-hand-dug-staged-excavation',hdStagesCsv(),'hcsv')};
   $('#pexp').onclick=exportProgress;
@@ -567,8 +611,29 @@ function renderHand(){
 let BP_VAL=loadLS('nithi_bp',{});
 const bnum=x=>{const n=parseNum(x==null?'':String(x));return (n==null||isNaN(n))?null:n};
 function bpBars(dia,key){const x=REINF[key];if(!x)return {bars:'',links:''};return {bars:x[0]+'T25 equally spaced',links:'T10 @ 175 outer ring ('+x[1]+' no.); T25 @ 2000 inner ring ('+x[2]+' no.)'}}
-function recSwitch(){return `<section class="card"><div class="seg" id="recsw" style="grid-template-columns:1fr 1fr"><button data-rf="hand" aria-pressed="${S.recForm!=='bored'}">Hand-dug record</button><button data-rf="bored" aria-pressed="${S.recForm==='bored'}">Bored pile record</button></div></section>`}
-function wireSwitch(){const el=$('#recsw');if(el)el.onclick=e=>{const b=e.target.closest('[data-rf]');if(!b)return;S.recForm=b.dataset.rf;render();window.scrollTo(0,0)}}
+/* ---------- construction method per pile: hand-dug or drilling rig ---------- */
+let METHOD=loadLS('nithi_method',{});
+const mKey=(s,id)=>s.key+'_'+id;
+function bpHasData(v){return !!v&&(Object.keys(v).some(k=>k!=='upd'&&k!=='log'&&v[k]!==''&&v[k]!=null)||(v.log||[]).some(x=>x.d||x.t))}
+function getMethod(s,id){
+  const m=METHOD[mKey(s,id)]; if(m==='hand'||m==='rig') return m;
+  if(hdHasData(REC_VAL['rec_'+s.key+'_'+id])) return 'hand';
+  if(bpHasData(BP_VAL['bp_'+s.key+'_'+id])) return 'rig';
+  return null;
+}
+function setMethod(s,id,m){METHOD[mKey(s,id)]=m; saveLS('nithi_method',METHOD)}
+const METHOD_NAME={hand:'Hand-dug',rig:'Drilling rig'};
+function recSwitch(){
+  const s=curStruct(), m=getMethod(s,S.recPile);
+  return `<section class="card"><div class="lab">How is this pile being built?</div><div class="seg" id="recsw" style="grid-template-columns:1fr 1fr"><button data-rf="hand" aria-pressed="${m==='hand'}">Hand-dug</button><button data-rf="rig" aria-pressed="${m==='rig'}">Drilling rig</button></div></section>`;
+}
+function wireSwitch(){const el=$('#recsw');if(el)el.onclick=e=>{const b=e.target.closest('[data-rf]');if(!b)return;setMethod(curStruct(),S.recPile,b.dataset.rf);render();window.scrollTo(0,0)}}
+function renderMethodPick(){
+  const s=curStruct(), q=pilesOf(s).find(x=>x.id===S.recPile);
+  $('#view').innerHTML=`${recSwitch()}<section class="card"><b>${esc(bookPileName(s,q))}</b><div class="hint">Choose how this pile is being built. The matching record form opens, and your choice is remembered for this pile. You can change it later without losing what you entered.</div>
+  <dl class="kv"><dt>Hand-dug</dt><dd>Shaft dug in stages with a concrete lining cast about every 1 m</dd><dt>Drilling rig</dt><dd>Bored pile record: boring, steel casing, bore log</dd></dl></section>`;
+  wireSwitch();
+}
 function bpCalc(r,q,v){
   const g=x=>(v[x]!=null&&v[x]!=='')?v[x]:'';
   const ground=bnum(g('ground')), cut=bnum(g('cutoff')!==''?g('cutoff'):(r.head!=null?r.head:'')), toe=bnum(g('toe'));
@@ -668,7 +733,7 @@ function renderBored(){
   $('#bpexp').onclick=exportBP;
   $('#bpcp').onclick=async()=>{try{await navigator.clipboard.writeText(bpText(s,q,r,v));$('#bpmsg').textContent='Copied.'}catch(e){$('#bpmsg').textContent='Copy not allowed here.'}};
 }
-function renderRecord(){ if(S.recForm==='bored') renderBored(); else renderHand(); }
+function renderRecord(){ const m=getMethod(curStruct(),S.recPile); if(m==='rig') renderBored(); else if(m==='hand') renderHand(); else renderMethodPick(); }
 
 /* ---------- SETTINGS ---------- */
 function renderSettings(){
@@ -688,6 +753,7 @@ const pilesOf=s=>s.pier?s.pier.piles:s.abut.piles;
 const pileLabel=(s,q)=>bookPileName(s,q).split('-').pop();
 function pilesSorted(s){return pilesOf(s).map(q=>({q,n:bookPileName(s,q)})).sort((a,b)=>a.n.localeCompare(b.n,undefined,{numeric:true}))}
 function pileState(s,id){
+  if(getMethod(s,id)==='rig'){const b=BP_VAL['bp_'+s.key+'_'+id]; return b&&b.casting?'done':bpHasData(b)?'dig':''}
   const v=REC_VAL['rec_'+s.key+'_'+id], st=v&&v.status;
   return st==='Concreted'?'done':st==='Reached toe'?'toe':st==='Digging'?'dig':(v&&hdHasData(v))?'dig':'';
 }
@@ -712,7 +778,7 @@ function renderLoc(){
     <button class="step" id="prevS" aria-label="Previous pier" ${i===0?'disabled':''}>‹</button>
     <button class="where" id="where" aria-haspopup="dialog" aria-label="Change pier or abutment. Now ${esc(s.label)}"><span class="tag">${tagOf(s)}</span><span class="wt"><b>${esc(s.label)}${topChanging(s)?'<span class="tri" title="Pier top level changing"></span><span class="sr">Pier top level changing</span>':''}</b><i>${esc(sub)}</i></span>${CARET}</button>
     <button class="step" id="nextS" aria-label="Next pier" ${i===structures.length-1?'disabled':''}>›</button></div>
-  ${showPiles?`<div class="piles" id="piles" role="group" aria-label="Piles">${list.map(x=>`<button class="pc" data-pile="${x.q.id}" data-st="${pileState(s,x.q.id)}" data-rd="${pileRead(s,x.q.id)?1:0}" aria-pressed="${x.q.id===cur}" aria-label="${x.n}">${x.n.split('-').pop()}</button>`).join('')}</div>`:''}`;
+  ${showPiles?`<div class="piles" id="piles" role="group" aria-label="Piles">${list.map(x=>`<button class="pc" data-pile="${x.q.id}" data-st="${pileState(s,x.q.id)}" data-rd="${pileRead(s,x.q.id)?1:0}" aria-pressed="${x.q.id===cur}" aria-label="${x.n}${getMethod(s,x.q.id)?', '+METHOD_NAME[getMethod(s,x.q.id)]:''}">${x.n.split('-').pop()}${getMethod(s,x.q.id)?'<i class="mk">'+(getMethod(s,x.q.id)==='rig'?'R':'H')+'</i>':''}</button>`).join('')}</div>`:''}`;
   const on=el.querySelector('.pc[aria-pressed="true"]'); if(on&&on.scrollIntoView) try{on.scrollIntoView({inline:'center',block:'nearest'})}catch(e){}
 }
 $('#loc').onclick=ev=>{
